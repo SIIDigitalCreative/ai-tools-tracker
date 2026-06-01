@@ -1,4 +1,3 @@
-"use client";
 import { useState, useEffect, useRef } from "react";
 
 // ── API ───────────────────────────────────────────────────────────────────────
@@ -44,14 +43,14 @@ async function fetchPurpose(url, name) {
 
 // ── Categories ────────────────────────────────────────────────────────────────
 const CATS = [
-  { label:"Image Gen",    color:"#7c3aed", bg:"#f3eeff" },
+  { label:"Image Gen",    color:"#F4442E", bg:"#fff0ee" },
   { label:"Video Gen",    color:"#db2777", bg:"#fce7f3" },
   { label:"Copywriting",  color:"#0284c7", bg:"#e0f2fe" },
   { label:"SEO",          color:"#059669", bg:"#d1fae5" },
   { label:"Analytics",    color:"#d97706", bg:"#fef3c7" },
   { label:"Design",       color:"#dc2626", bg:"#fee2e2" },
   { label:"Automation",   color:"#0891b2", bg:"#cffafe" },
-  { label:"Social Media", color:"#7c3aed", bg:"#ede9fe" },
+  { label:"Social Media", color:"#FFB27D", bg:"#fff8f0" },
   { label:"Chat / LLM",   color:"#2563eb", bg:"#dbeafe" },
   { label:"Other",        color:"#6b7280", bg:"#f3f4f6" },
 ];
@@ -61,6 +60,9 @@ const makeId  = () => Date.now().toString(36) + Math.random().toString(36).slice
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function AITracker() {
   const [tools,setTools]               = useState([]);
+  const [companyName,setCompanyName]   = useState("Sunbeams Lifestyle");
+  const [editingName,setEditingName]   = useState(false);
+  const nameRef = useRef(null);
   const [adding,setAdding]             = useState(false);
   const [editId,setEditId]             = useState(null);
   const [syncStatus,setSyncStatus]     = useState("");
@@ -144,29 +146,41 @@ export default function AITracker() {
   });
 
   const inp = { width:"100%", border:"1.5px solid #e2e8f0", borderRadius:6, padding:"9px 12px", fontFamily:"'DM Sans',sans-serif", fontSize:13, outline:"none", color:"#0f172a", background:"#f8fafc" };
-  const btnP = { padding:"10px 22px", background:"#7c3aed", color:"#fff", border:"none", borderRadius:7, fontFamily:"'DM Sans',sans-serif", fontSize:13, fontWeight:600, cursor:"pointer" };
+  const btnP = { padding:"10px 22px", background:"linear-gradient(135deg,#F4442E,#FFB27D)", color:"#fff", border:"none", borderRadius:7, fontFamily:"'DM Sans',sans-serif", fontSize:13, fontWeight:600, cursor:"pointer" };
   const btnS = { padding:"9px 16px", background:"none", border:"1.5px solid #e2e8f0", color:"#64748b", borderRadius:7, fontFamily:"'DM Sans',sans-serif", fontSize:13, cursor:"pointer" };
   const lbl  = { fontSize:11, fontWeight:600, letterSpacing:"0.1em", textTransform:"uppercase", color:"#64748b", display:"block", marginBottom:6 };
 
   return (
-    <div style={{ fontFamily:"'DM Sans',sans-serif", background:"#F4F6FA", minHeight:"100vh", color:"#0f172a", fontSize:14 }}>
+    <div style={{ fontFamily:"'DM Sans',sans-serif", background:"#FFF5F2", minHeight:"100vh", color:"#0f172a", fontSize:14 }}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 
       {/* HEADER */}
-      <div style={{ background:"linear-gradient(135deg,#0f172a 0%,#1e293b 100%)", padding:"32px 36px 28px", position:"relative", overflow:"hidden" }}>
-        <div style={{ position:"absolute", top:-40, right:-40, width:220, height:220, borderRadius:"50%", background:"rgba(139,92,246,0.12)" }}/>
-        <div style={{ position:"absolute", bottom:-20, left:80, width:140, height:140, borderRadius:"50%", background:"rgba(6,182,212,0.08)" }}/>
+      <div style={{ background:"linear-gradient(135deg,#F4442E 0%,#FFB27D 100%)", padding:"32px 36px 28px", position:"relative", overflow:"hidden" }}>
+        <div style={{ position:"absolute", top:-40, right:-40, width:220, height:220, borderRadius:"50%", background:"rgba(255,255,255,0.12)" }}/>
+        <div style={{ position:"absolute", bottom:-20, left:80, width:140, height:140, borderRadius:"50%", background:"rgba(255,255,255,0.08)" }}/>
         <div style={{ position:"relative" }}>
-          <div style={{ fontSize:10, letterSpacing:"0.28em", textTransform:"uppercase", color:"#94a3b8", marginBottom:6 }}>Sunbeams Lifestyle · Internal Tools</div>
-          <div style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:28, fontWeight:700, color:"#f8fafc", marginBottom:4 }}>
-            AI Tools <span style={{ color:"#a78bfa" }}>Tracker</span>
+          <div style={{ fontSize:10, letterSpacing:"0.28em", textTransform:"uppercase", color:"rgba(255,255,255,0.7)", marginBottom:6 }}>{companyName} · Internal Tools</div>
+          <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:4 }}>
+            {editingName ? (
+              <input ref={nameRef} value={companyName} autoFocus
+                onChange={e=>setCompanyName(e.target.value)}
+                onBlur={()=>setEditingName(false)}
+                onKeyDown={e=>e.key==="Enter"&&setEditingName(false)}
+                style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:28, fontWeight:700, color:"#fff", background:"rgba(255,255,255,0.15)", border:"2px solid rgba(255,255,255,0.4)", borderRadius:6, padding:"2px 10px", outline:"none", width:"auto", minWidth:200 }}/>
+            ) : (
+              <div style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:28, fontWeight:700, color:"#fff" }}>
+                {companyName} <span style={{ color:"rgba(255,255,255,0.7)", fontWeight:400 }}>AI Tools</span> <span style={{ color:"#fff" }}>Tracker</span>
+              </div>
+            )}
+            <button onClick={()=>setEditingName(true)} title="Edit company name"
+              style={{ background:"rgba(255,255,255,0.15)", border:"1px solid rgba(255,255,255,0.3)", borderRadius:4, padding:"3px 8px", color:"#fff", fontSize:10, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", letterSpacing:"0.08em" }}>✏ Edit</button>
           </div>
-          <div style={{ fontSize:13, color:"#64748b", marginBottom:24 }}>All AI subscriptions in one place — synced live</div>
+          <div style={{ fontSize:13, color:"rgba(255,255,255,0.65)", marginBottom:24 }}>All AI subscriptions in one place — synced live</div>
           <div style={{ display:"flex", gap:12, flexWrap:"wrap", alignItems:"center" }}>
             {[
-              { label:"Total Tools",   value:tools.length,             color:"#a78bfa" },
-              { label:"Monthly Cost",  value:fmt(totalMonthly,"PHP"),  color:"#34d399" },
-              { label:"Annual Cost",   value:fmt(totalAnnual, "PHP"),  color:"#fb923c" },
+              { label:"Total Tools",   value:tools.length,             color:"#fff" },
+              { label:"Monthly Cost",  value:fmt(totalMonthly,"PHP"),  color:"#fff" },
+              { label:"Annual Cost",   value:fmt(totalAnnual, "PHP"),  color:"rgba(255,255,255,0.85)" },
             ].map(s => (
               <div key={s.label} style={{ background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:8, padding:"10px 18px" }}>
                 <div style={{ fontSize:18, fontWeight:700, color:s.color, fontFamily:"'Space Grotesk',sans-serif" }}>{s.value}</div>
@@ -186,7 +200,7 @@ export default function AITracker() {
 
         {/* Add button */}
         {!adding && (
-          <button style={{ ...btnP, display:"flex", alignItems:"center", gap:8, marginBottom:22, boxShadow:"0 4px 14px rgba(124,58,237,0.28)" }}
+          <button style={{ ...btnP, display:"flex", alignItems:"center", gap:8, marginBottom:22, boxShadow:"0 4px 14px rgba(244,68,46,0.35)", margin:"0 auto 22px" }}
             onClick={() => setAdding(true)}>
             <span style={{ fontSize:18, lineHeight:1 }}>+</span> Add AI Tool
           </button>
@@ -208,7 +222,7 @@ export default function AITracker() {
                 <label style={lbl}>Website URL *</label>
                 <div style={{ position:"relative" }}>
                   <input style={inp} value={form.url} onChange={e=>handleUrl(e.target.value)} placeholder="https://claude.ai"/>
-                  {fetchingPurpose && <span style={{ position:"absolute", right:10, top:"50%", transform:"translateY(-50%)", fontSize:10, color:"#7c3aed" }}>Fetching…</span>}
+                  {fetchingPurpose && <span style={{ position:"absolute", right:10, top:"50%", transform:"translateY(-50%)", fontSize:10, color:"#F4442E" }}>Fetching…</span>}
                 </div>
               </div>
             </div>
@@ -311,8 +325,8 @@ export default function AITracker() {
             </div>
 
             {/* COST SUMMARY */}
-            <div style={{ background:"#0f172a", borderRadius:12, padding:"24px 28px" }}>
-              <div style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:16, fontWeight:600, color:"#f8fafc", marginBottom:18 }}>💰 Cost Summary</div>
+            <div style={{ background:"linear-gradient(135deg,#F4442E 0%,#c73520 100%)", borderRadius:12, padding:"24px 28px" }}>
+              <div style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:16, fontWeight:600, color:"#fff", marginBottom:18 }}>💰 Cost Summary</div>
 
               {/* By category */}
               <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:22 }}>
@@ -324,11 +338,11 @@ export default function AITracker() {
                       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:5 }}>
                         <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                           <span style={{ fontSize:9, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", padding:"2px 8px", borderRadius:3, background:ci.bg+"22", color:ci.color, border:`1px solid ${ci.color}44` }}>{cat}</span>
-                          <span style={{ fontSize:11, color:"#475569" }}>{count} tool{count>1?"s":""}</span>
+                          <span style={{ fontSize:11, color:"rgba(255,255,255,0.7)" }}>{count} tool{count>1?"s":""}</span>
                         </div>
-                        <span style={{ fontSize:13, fontWeight:600, color:"#f8fafc", fontFamily:"'Space Grotesk',sans-serif" }}>{fmt(monthly,"PHP")}/mo</span>
+                        <span style={{ fontSize:13, fontWeight:600, color:"#fff", fontFamily:"'Space Grotesk',sans-serif" }}>{fmt(monthly,"PHP")}/mo</span>
                       </div>
-                      <div style={{ height:4, background:"#1e293b", borderRadius:2 }}>
+                      <div style={{ height:4, background:"rgba(255,255,255,0.15)", borderRadius:2 }}>
                         <div style={{ height:4, borderRadius:2, background:ci.color, width:`${pct}%`, transition:"width 0.4s ease" }}/>
                       </div>
                     </div>
@@ -337,15 +351,15 @@ export default function AITracker() {
               </div>
 
               {/* Totals */}
-              <div style={{ borderTop:"1px solid #1e293b", paddingTop:18, display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:16 }}>
+              <div style={{ borderTop:"1px solid rgba(255,255,255,0.2)", paddingTop:18, display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:16 }}>
                 {[
-                  { label:"Total Tools",   value:tools.length,            color:"#a78bfa" },
-                  { label:"Monthly Total", value:fmt(totalMonthly,"PHP"), color:"#34d399" },
-                  { label:"Annual Total",  value:fmt(totalAnnual, "PHP"), color:"#fb923c" },
+                  { label:"Total Tools",   value:tools.length,            color:"#fff" },
+                  { label:"Monthly Total", value:fmt(totalMonthly,"PHP"), color:"#fff" },
+                  { label:"Annual Total",  value:fmt(totalAnnual, "PHP"), color:"rgba(255,255,255,0.85)" },
                 ].map(s => (
                   <div key={s.label} style={{ textAlign:"center" }}>
                     <div style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:22, fontWeight:700, color:s.color }}>{s.value}</div>
-                    <div style={{ fontSize:10, letterSpacing:"0.14em", textTransform:"uppercase", color:"#475569", marginTop:3 }}>{s.label}</div>
+                    <div style={{ fontSize:10, letterSpacing:"0.14em", textTransform:"uppercase", color:"rgba(255,255,255,0.6)", marginTop:3 }}>{s.label}</div>
                   </div>
                 ))}
               </div>
