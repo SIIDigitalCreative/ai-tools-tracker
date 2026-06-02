@@ -80,7 +80,6 @@ export default function AITracker() {
   const [companyName,setCompanyName] = useState("");
   const [editingName,setEditingName] = useState(false);
   const [adding,setAdding]           = useState(false);
-  const [inlineEditId,setInlineEditId] = useState(null);
   const [isAuthed,setIsAuthed]       = useState(false);
   const [showPwModal,setShowPwModal] = useState(false);
   const [pwInput,setPwInput]         = useState("");
@@ -228,8 +227,8 @@ export default function AITracker() {
       notes:t.notes||""
     });
     setEditId(t.id);
-    setInlineEditId(t.id);
-    setAdding(false);
+    setAdding(true);
+    window.scrollTo({top:0, behavior:"smooth"});
   };
 
   // Cost helpers — always convert to PHP for totals
@@ -324,7 +323,7 @@ export default function AITracker() {
         {/* FORM */}
         {adding && (
           <div style={{background:"#fff",border:"1.5px solid #e2e8f0",borderRadius:12,padding:24,marginBottom:22,boxShadow:"0 4px 24px rgba(15,23,42,0.08)"}}>
-            <div style={{fontFamily:"'Space Grotesk',sans-serif",fontSize:16,fontWeight:600,marginBottom:20}}>{editId?"Edit Tool":"Add New AI Tool"}</div>
+            <div style={{fontFamily:"'Space Grotesk',sans-serif",fontSize:16,fontWeight:600,marginBottom:20}}>{editId?`✏ Editing: ${form.name}`:"Add New AI Tool"}</div>
 
             {/* Name + URL */}
             <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:14,marginBottom:14}}>
