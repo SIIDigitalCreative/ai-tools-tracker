@@ -74,6 +74,46 @@ const EMPTY_FORM = {
   notes:""
 };
 
+// ── FavIcon component — tries multiple sources, falls back to letter avatar ───
+function FavIcon({ url, name, color, bg }) {
+  const domain = url.replace(/https?:\/\/(www\.)?/, "").split("/")[0];
+  const sources = [
+    `https://www.google.com/s2/favicons?domain=${domain}&sz=64`,
+    `https://icons.duckduckgo.com/ip3/${domain}.ico`,
+    `https://${domain}/favicon.ico`,
+  ];
+  const [idx, setIdx] = useState(0);
+  const [failed, setFailed] = useState(false);
+
+  // Reset when url changes
+  useEffect(() => { setIdx(0); setFailed(false); }, [url]);
+
+  const tryNext = () => {
+    if (idx + 1 < sources.length) setIdx(i => i + 1);
+    else setFailed(true);
+  };
+
+  return (
+    <div style={{width:44,height:44,borderRadius:10,background:bg,border:`1.5px solid ${color}33`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,overflow:"hidden",position:"relative"}}>
+      {!failed && (
+        <img
+          key={sources[idx]}
+          src={sources[idx]}
+          alt=""
+          width={28} height={28}
+          style={{borderRadius:4,objectFit:"contain"}}
+          onError={tryNext}
+        />
+      )}
+      {failed && (
+        <span style={{fontFamily:"'Space Grotesk',sans-serif",fontSize:18,fontWeight:700,color}}>
+          {name.charAt(0).toUpperCase()}
+        </span>
+      )}
+    </div>
+  );
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function AITracker() {
   const [tools,setTools]             = useState([]);
@@ -437,18 +477,7 @@ export default function AITracker() {
                 return (
                   <div key={t.id} className="tool-card" style={{background:"#fff",border:"1.5px solid #e2e8f0",borderRadius:10,padding:"14px 14px",display:"flex",alignItems:"flex-start",gap:12,flexWrap:"wrap"}}>
                     {/* Favicon */}
-                    <div style={{width:44,height:44,borderRadius:10,background:catColor(cats[0]).bg,border:`1.5px solid ${catColor(cats[0]).color}33`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,overflow:"hidden",position:"relative"}}>
-                      <img
-                        src={`https://www.google.com/s2/favicons?domain=${t.url.replace(/https?:\/\/(www\.)?/,"")}&sz=64`}
-                        alt=""
-                        width={28} height={28}
-                        style={{borderRadius:4,objectFit:"contain"}}
-                        onError={e=>{e.target.style.display="none"; e.target.nextSibling.style.display="flex";}}
-                      />
-                      <span style={{display:"none",position:"absolute",inset:0,alignItems:"center",justifyContent:"center",fontFamily:"'Space Grotesk',sans-serif",fontSize:18,fontWeight:700,color:catColor(cats[0]).color}}>
-                        {t.name.charAt(0).toUpperCase()}
-                      </span>
-                    </div>
+                    <FavIcon url={t.url} name={t.name} color={catColor(cats[0]).color} bg={catColor(cats[0]).bg} />
                     {/* Info */}
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:4,flexWrap:"wrap"}}>
