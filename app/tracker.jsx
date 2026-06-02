@@ -91,6 +91,10 @@ export default function AITracker() {
   const [editId,setEditId]           = useState(null);
   const [syncStatus,setSyncStatus]   = useState("");
   const [form,setForm]               = useState(EMPTY_FORM);
+  const [filterCat,setFilterCat]     = useState("all");
+  const [filterStatus,setFilterStatus] = useState("all");
+  const [groupBy,setGroupBy]         = useState("none");
+  const [searchQ,setSearchQ]         = useState("");
   const [fetchingPurpose,setFP]      = useState(false);
   const [customCatInput,setCustomCatInput] = useState("");
   const [customStatInput,setCustomStatInput] = useState("");
@@ -222,6 +226,16 @@ export default function AITracker() {
   };
 
   const deleteTool = (id) => save(tools.filter(t=>t.id!==id));
+
+  const moveTool = (id, dir) => {
+    const idx = tools.findIndex(t=>t.id===id);
+    if (idx < 0) return;
+    const newIdx = idx + dir;
+    if (newIdx < 0 || newIdx >= tools.length) return;
+    const updated = [...tools];
+    [updated[idx], updated[newIdx]] = [updated[newIdx], updated[idx]];
+    save(updated);
+  };
 
   const startEditDirect = (t) => {
     setForm({
@@ -457,6 +471,57 @@ export default function AITracker() {
         )}
 
         {/* TOOLS LIST */}
+        {/* FILTER / GROUP TOOLBAR */}
+        {tools.length > 0 && (
+          <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap",alignItems:"center",background:"#fff",border:"1.5px solid #e2e8f0",borderRadius:8,padding:"10px 14px"}}>
+            {/* Search */}
+            <input value={searchQ} onChange={e=>setSearchQ(e.target.value)} placeholder="Search tools…"
+              style={{flex:1,minWidth:140,border:"1.5px solid #e2e8f0",borderRadius:6,padding:"7px 10px",fontFamily:"'DM Sans',sans-serif",fontSize:12,outline:"none",background:"#f8fafc",color:"#0f172a"}}/>
+
+            {/* Filter by category */}
+            <div style={{display:"flex",alignItems:"center",gap:4}}>
+              <span style={{fontSize:10,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"#94a3b8"}}>Category:</span>
+              <select value={filterCat} onChange={e=>setFilterCat(e.target.value)}
+                style={{border:"1.5px solid #e2e8f0",borderRadius:6,padding:"6px 8px",fontFamily:"'DM Sans',sans-serif",fontSize:12,outline:"none",background:"#f8fafc",color:"#0f172a"}}>
+                <option value="all">All</option>
+                {[...new Set([...DEFAULT_CATS, ...tools.flatMap(t=>t.categories||[t.category||"Other"])])].map(cat=>(
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Filter by status */}
+            <div style={{display:"flex",alignItems:"center",gap:4}}>
+              <span style={{fontSize:10,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"#94a3b8"}}>Status:</span>
+              <select value={filterStatus} onChange={e=>setFilterStatus(e.target.value)}
+                style={{border:"1.5px solid #e2e8f0",borderRadius:6,padding:"6px 8px",fontFamily:"'DM Sans',sans-serif",fontSize:12,outline:"none",background:"#f8fafc",color:"#0f172a"}}>
+                <option value="all">All</option>
+                {[...new Set([...DEFAULT_STATUSES, ...tools.map(t=>t.status||"Active")])].map(s=>(
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Group by */}
+            <div style={{display:"flex",alignItems:"center",gap:4}}>
+              <span style={{fontSize:10,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"#94a3b8"}}>Group:</span>
+              <select value={groupBy} onChange={e=>setGroupBy(e.target.value)}
+                style={{border:"1.5px solid #e2e8f0",borderRadius:6,padding:"6px 8px",fontFamily:"'DM Sans',sans-serif",fontSize:12,outline:"none",background:"#f8fafc",color:"#0f172a"}}>
+                <option value="none">None</option>
+                <option value="category">By Category</option>
+                <option value="status">By Status</option>
+                <option value="billing">By Billing</option>
+              </select>
+            </div>
+
+            {/* Clear filters */}
+            {(filterCat!=="all"||filterStatus!=="all"||groupBy!=="none"||searchQ)&&(
+              <button onClick={()=>{setFilterCat("all");setFilterStatus("all");setGroupBy("none");setSearchQ("");}}
+                style={{fontSize:11,color:"#F4442E",background:"none",border:"none",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",textDecoration:"underline"}}>Clear</button>
+            )}
+          </div>
+        )}
+
         {tools.length===0&&!adding ? (
           <div style={{textAlign:"center",padding:"70px 0",color:"#94a3b8"}}>
             <div style={{fontSize:40,marginBottom:12}}>🤖</div>
@@ -466,7 +531,56 @@ export default function AITracker() {
         ) : (
           <>
             <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:28}}>
-              {tools.map(t=>{
+              {(()=>{
+                // Filter tools
+                let filtered = tools.filter(t => {
+                  const cats = t.categories || [t.category||"Other"];
+                  const matchCat = filterCat==="all" || cats.includes(filterCat);
+                  const matchStatus = filterStatus==="all" || (t.status||"Active")===filterStatus;
+                  const matchSearch = !searchQ || t.name.toLowerCase().includes(searchQ.toLowerCase()) || (t.purpose||"").toLowerCase().includes(searchQ.toLowerCase());
+                  return matchCat && matchStatus && matchSearch;
+                });
+
+                // Group tools
+                let groups = [];
+                if (groupBy==="none") {
+                  groups = [{label:null, items:filtered}];
+                } else if (groupBy==="category") {
+                  const catSet = {};
+                  filtered.forEach(t => {
+                    const cats = t.categories || [t.category||"Other"];
+                    cats.forEach(cat => {
+                      if(!catSet[cat]) catSet[cat]=[];
+                      if(!catSet[cat].find(x=>x.id===t.id)) catSet[cat].push(t);
+                    });
+                  });
+                  groups = Object.entries(catSet).sort((a,b)=>a[0].localeCompare(b[0])).map(([label,items])=>({label,items}));
+                } else if (groupBy==="status") {
+                  const statSet = {};
+                  filtered.forEach(t => {
+                    const s = t.status||"Active";
+                    if(!statSet[s]) statSet[s]=[];
+                    statSet[s].push(t);
+                  });
+                  groups = Object.entries(statSet).sort((a,b)=>a[0].localeCompare(b[0])).map(([label,items])=>({label,items}));
+                } else if (groupBy==="billing") {
+                  const billSet = {};
+                  filtered.forEach(t => {
+                    const b = t.billing==="monthly"?"Monthly":t.billing==="annual"?"Annual":t.billing==="credits"?"Credits":"Free";
+                    if(!billSet[b]) billSet[b]=[];
+                    billSet[b].push(t);
+                  });
+                  groups = Object.entries(billSet).sort((a,b)=>a[0].localeCompare(b[0])).map(([label,items])=>({label,items}));
+                }
+
+                if (filtered.length===0) return <div style={{textAlign:"center",padding:"30px 0",color:"#94a3b8",fontSize:13}}>No tools match the current filters</div>;
+
+                return groups.map((group,gi) => (
+                  <div key={gi}>
+                    {group.label && (
+                      <div style={{fontSize:11,fontWeight:700,letterSpacing:"0.14em",textTransform:"uppercase",color:"#F4442E",marginBottom:8,marginTop:gi>0?18:0,paddingBottom:6,borderBottom:"1.5px solid #F4442E22"}}>{group.label} <span style={{color:"#94a3b8",fontWeight:400}}>({group.items.length})</span></div>
+                    )}
+                    {group.items.map(t=>{
                 const cats = t.categories || [t.category||"Other"];
                 const sc   = statColor(t.status||"Active");
                 const daysLeft = t.endDate ? Math.ceil((new Date(t.endDate)-new Date())/(1000*60*60*24)) : null;
@@ -747,7 +861,10 @@ export default function AITracker() {
                     )}
                   </div>
                 );
-              })}
+                })}
+                  </div>
+                ));
+              })()}
             </div>
 
             {/* COST SUMMARY */}
