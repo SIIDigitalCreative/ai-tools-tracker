@@ -18,22 +18,26 @@ export async function OPTIONS() {
   return cors(new NextResponse(null, { status: 204 }));
 }
 
-// GET — load all tools
+// GET — load tools and companyName
 export async function GET() {
   try {
-    const tools = await redis.get("ai-tools") ?? [];
-    return cors(NextResponse.json({ tools }));
+    const tools       = await redis.get("ai-tools")       ?? [];
+    const companyName = await redis.get("ai-company-name") ?? "";
+    return cors(NextResponse.json({ tools, companyName }));
   } catch (err) {
     console.error("Redis GET error:", err);
-    return cors(NextResponse.json({ tools: [] }, { status: 500 }));
+    return cors(NextResponse.json({ tools: [], companyName: "" }, { status: 500 }));
   }
 }
 
-// POST — save all tools
+// POST — save tools and companyName
 export async function POST(req: NextRequest) {
   try {
-    const { tools } = await req.json();
+    const { tools, companyName } = await req.json();
     await redis.set("ai-tools", tools);
+    if (companyName !== undefined) {
+      await redis.set("ai-company-name", companyName);
+    }
     return cors(NextResponse.json({ ok: true }));
   } catch (err) {
     console.error("Redis POST error:", err);
