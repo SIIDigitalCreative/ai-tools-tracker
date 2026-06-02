@@ -116,7 +116,7 @@ function ToolIcon({ url, name, bg, color }) {
 }
 export default function AITracker() {
   const [tools,setTools]               = useState([]);
-  const [companyName,setCompanyName]   = useState("Sunbeams Lifestyle");
+  const [companyName,setCompanyName]   = useState("");
   const [editingName,setEditingName]   = useState(false);
   const nameRef = useRef(null);
   const [adding,setAdding]             = useState(false);
@@ -129,18 +129,33 @@ export default function AITracker() {
 
   // Load on mount
   useEffect(() => {
-    loadFromRedis().then(t => setTools(t));
+    loadFromRedis().then(data => {
+      if (Array.isArray(data)) {
+        setTools(data);
+      } else if (data && typeof data === "object") {
+        if (data.tools) setTools(data.tools);
+        if (data.companyName) setCompanyName(data.companyName);
+      }
+    });
   }, []);
 
   // Debounced save to Redis
-  const save = (updated) => {
+  const save = (updated, name = companyName) => {
     setTools(updated);
     setSyncStatus("saving");
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
-      await saveToRedis(updated);
+      await saveToRedis({ tools: updated, companyName: name });
       setSyncStatus("saved");
       setTimeout(() => setSyncStatus(""), 2000);
+    }, 600);
+  };
+
+  const handleNameChange = (name) => {
+    setCompanyName(name);
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(async () => {
+      await saveToRedis({ tools, companyName: name });
     }, 600);
   };
 
@@ -215,17 +230,18 @@ export default function AITracker() {
         <div style={{ position:"absolute", top:-40, right:-40, width:220, height:220, borderRadius:"50%", background:"rgba(255,255,255,0.12)" }}/>
         <div style={{ position:"absolute", bottom:-20, left:80, width:140, height:140, borderRadius:"50%", background:"rgba(255,255,255,0.08)" }}/>
         <div style={{ position:"relative" }}>
-          <div style={{ fontSize:10, letterSpacing:"0.28em", textTransform:"uppercase", color:"rgba(255,255,255,0.7)", marginBottom:6 }}>{companyName} · Internal Tools</div>
+          <div style={{ fontSize:10, letterSpacing:"0.28em", textTransform:"uppercase", color:"rgba(255,255,255,0.7)", marginBottom:6 }}>{companyName ? `${companyName} · ` : ""}Internal Tools</div>
           <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:4 }}>
             {editingName ? (
               <input ref={nameRef} value={companyName} autoFocus
-                onChange={e=>setCompanyName(e.target.value)}
+                onChange={e=>{setCompanyName(e.target.value); handleNameChange(e.target.value);}}
                 onBlur={()=>setEditingName(false)}
                 onKeyDown={e=>e.key==="Enter"&&setEditingName(false)}
+                placeholder="Your Company Name"
                 style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:28, fontWeight:700, color:"#fff", background:"rgba(255,255,255,0.15)", border:"2px solid rgba(255,255,255,0.4)", borderRadius:6, padding:"2px 10px", outline:"none", width:"auto", minWidth:200 }}/>
             ) : (
               <div style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:28, fontWeight:700, color:"#fff" }}>
-                {companyName} <span style={{ color:"rgba(255,255,255,0.7)", fontWeight:400 }}>AI Tools</span> <span style={{ color:"#fff" }}>Tracker</span>
+                {companyName || <span style={{color:"rgba(255,255,255,0.4)"}}>Your Company</span>} <span style={{ color:"rgba(255,255,255,0.7)", fontWeight:400 }}>AI Tools</span> <span style={{ color:"#fff" }}>Tracker</span>
               </div>
             )}
             <button onClick={()=>setEditingName(true)} title="Edit company name"
