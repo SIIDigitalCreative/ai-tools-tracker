@@ -496,7 +496,7 @@ export default function AITracker() {
                       {t.endDate&&(
                         <div style={{fontSize:11,color:daysLeft!==null&&daysLeft<=30?"#dc2626":"#64748b",marginTop:2}}>
                           📅 Ends {new Date(t.endDate).toLocaleDateString("en-PH",{month:"short",day:"numeric",year:"numeric"})}
-                          {daysLeft!==null&&daysLeft>=0&&<span style={{marginLeft:6,fontWeight:600}}>{daysLeft<=30?`⚠ ${daysLeft} days left`:`(${daysLeft} days)`}</span>}
+                          {daysLeft!==null&&daysLeft>=0&&<span style={{marginLeft:6,fontWeight:600}}>{daysLeft<=30?`⚠ ${daysLeft} ${daysLeft===1?"day":"days"} left`:`(${daysLeft} ${daysLeft===1?"day":"days"})`}</span>}
                           {daysLeft!==null&&daysLeft<0&&<span style={{marginLeft:6,color:"#dc2626",fontWeight:600}}>Expired</span>}
                         </div>
                       )}
