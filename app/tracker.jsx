@@ -12,11 +12,11 @@ async function loadFromRedis() {
   } catch { return { tools:[], companyName:"" }; }
 }
 
-async function saveToRedis(tools, companyName) {
+async function saveToRedis(tools, companyName, settings) {
   try {
     await fetch(`${API}/api/tools`, {
       method:"POST", headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({ tools, companyName }),
+      body: JSON.stringify({ tools, companyName, ...(settings||{}) }),
     });
   } catch {}
 }
@@ -95,6 +95,7 @@ export default function AITracker() {
   const [filterStatus,setFilterStatus] = useState("all");
   const [groupBy,setGroupBy]         = useState("none");
   const [searchQ,setSearchQ]         = useState("");
+  const [groupOrder,setGroupOrder]   = useState([]);
   const [fetchingPurpose,setFP]      = useState(false);
   const [customCatInput,setCustomCatInput] = useState("");
   const [customStatInput,setCustomStatInput] = useState("");
@@ -105,6 +106,11 @@ export default function AITracker() {
     loadFromRedis().then(d => {
       if (d.tools) setTools(d.tools);
       if (d.companyName) setCompanyName(d.companyName);
+      if (d.filterCat) setFilterCat(d.filterCat);
+      if (d.filterStatus) setFilterStatus(d.filterStatus);
+      if (d.groupBy) setGroupBy(d.groupBy);
+      if (d.searchQ) setSearchQ(d.searchQ);
+      if (d.groupOrder) setGroupOrder(d.groupOrder);
     });
   }, []);
 
@@ -113,7 +119,7 @@ export default function AITracker() {
     setSyncStatus("saving");
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
-      await saveToRedis(updated, name !== undefined ? name : companyName);
+      await saveToRedis(updated, name !== undefined ? name : companyName, {filterCat, filterStatus, groupBy, searchQ, groupOrder});
       setSyncStatus("saved");
       setTimeout(() => setSyncStatus(""), 2000);
     }, 600);
@@ -123,10 +129,38 @@ export default function AITracker() {
     setSyncStatus("saving");
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
-      await saveToRedis(tools, name);
+      await saveToRedis(tools, name, {filterCat, filterStatus, groupBy, searchQ, groupOrder});
       setSyncStatus("saved");
       setTimeout(() => setSyncStatus(""), 2000);
     }, 600);
+  };
+
+  const saveSettings = (overrides) => {
+    const settings = {
+      filterCat: overrides.filterCat !== undefined ? overrides.filterCat : filterCat,
+      filterStatus: overrides.filterStatus !== undefined ? overrides.filterStatus : filterStatus,
+      groupBy: overrides.groupBy !== undefined ? overrides.groupBy : groupBy,
+      searchQ: overrides.searchQ !== undefined ? overrides.searchQ : searchQ,
+      groupOrder: overrides.groupOrder !== undefined ? overrides.groupOrder : groupOrder,
+    };
+    setSyncStatus("saving");
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(async () => {
+      await saveToRedis(tools, companyName, settings);
+      setSyncStatus("saved");
+      setTimeout(() => setSyncStatus(""), 2000);
+    }, 600);
+  };
+
+  const moveGroup = (label, dir) => {
+    const order = [...groupOrder];
+    const idx = order.indexOf(label);
+    if (idx < 0) return;
+    const newIdx = idx + dir;
+    if (newIdx < 0 || newIdx >= order.length) return;
+    [order[idx], order[newIdx]] = [order[newIdx], order[idx]];
+    setGroupOrder(order);
+    saveSettings({groupOrder: order});
   };
 
   // Auth gate
@@ -475,13 +509,13 @@ export default function AITracker() {
         {tools.length > 0 && (
           <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap",alignItems:"center",background:"#fff",border:"1.5px solid #e2e8f0",borderRadius:8,padding:"10px 14px"}}>
             {/* Search */}
-            <input value={searchQ} onChange={e=>setSearchQ(e.target.value)} placeholder="Search tools…"
+            <input value={searchQ} onChange={e=>{setSearchQ(e.target.value);saveSettings({searchQ:e.target.value});}} placeholder="Search tools…"
               style={{flex:1,minWidth:140,border:"1.5px solid #e2e8f0",borderRadius:6,padding:"7px 10px",fontFamily:"'DM Sans',sans-serif",fontSize:12,outline:"none",background:"#f8fafc",color:"#0f172a"}}/>
 
             {/* Filter by category */}
             <div style={{display:"flex",alignItems:"center",gap:4}}>
               <span style={{fontSize:10,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"#94a3b8"}}>Category:</span>
-              <select value={filterCat} onChange={e=>setFilterCat(e.target.value)}
+              <select value={filterCat} onChange={e=>{setFilterCat(e.target.value);saveSettings({filterCat:e.target.value});}}
                 style={{border:"1.5px solid #e2e8f0",borderRadius:6,padding:"6px 8px",fontFamily:"'DM Sans',sans-serif",fontSize:12,outline:"none",background:"#f8fafc",color:"#0f172a"}}>
                 <option value="all">All</option>
                 {[...new Set([...DEFAULT_CATS, ...tools.flatMap(t=>t.categories||[t.category||"Other"])])].map(cat=>(
@@ -493,7 +527,7 @@ export default function AITracker() {
             {/* Filter by status */}
             <div style={{display:"flex",alignItems:"center",gap:4}}>
               <span style={{fontSize:10,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"#94a3b8"}}>Status:</span>
-              <select value={filterStatus} onChange={e=>setFilterStatus(e.target.value)}
+              <select value={filterStatus} onChange={e=>{setFilterStatus(e.target.value);saveSettings({filterStatus:e.target.value});}}
                 style={{border:"1.5px solid #e2e8f0",borderRadius:6,padding:"6px 8px",fontFamily:"'DM Sans',sans-serif",fontSize:12,outline:"none",background:"#f8fafc",color:"#0f172a"}}>
                 <option value="all">All</option>
                 {[...new Set([...DEFAULT_STATUSES, ...tools.map(t=>t.status||"Active")])].map(s=>(
@@ -505,7 +539,7 @@ export default function AITracker() {
             {/* Group by */}
             <div style={{display:"flex",alignItems:"center",gap:4}}>
               <span style={{fontSize:10,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"#94a3b8"}}>Group:</span>
-              <select value={groupBy} onChange={e=>setGroupBy(e.target.value)}
+              <select value={groupBy} onChange={e=>{setGroupBy(e.target.value);saveSettings({groupBy:e.target.value});}}
                 style={{border:"1.5px solid #e2e8f0",borderRadius:6,padding:"6px 8px",fontFamily:"'DM Sans',sans-serif",fontSize:12,outline:"none",background:"#f8fafc",color:"#0f172a"}}>
                 <option value="none">None</option>
                 <option value="category">By Category</option>
@@ -516,7 +550,7 @@ export default function AITracker() {
 
             {/* Clear filters */}
             {(filterCat!=="all"||filterStatus!=="all"||groupBy!=="none"||searchQ)&&(
-              <button onClick={()=>{setFilterCat("all");setFilterStatus("all");setGroupBy("none");setSearchQ("");}}
+              <button onClick={()=>{setFilterCat("all");setFilterStatus("all");setGroupBy("none");setSearchQ("");setGroupOrder([]);saveSettings({filterCat:"all",filterStatus:"all",groupBy:"none",searchQ:"",groupOrder:[]});}}
                 style={{fontSize:11,color:"#F4442E",background:"none",border:"none",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",textDecoration:"underline"}}>Clear</button>
             )}
           </div>
@@ -573,12 +607,39 @@ export default function AITracker() {
                   groups = Object.entries(billSet).sort((a,b)=>a[0].localeCompare(b[0])).map(([label,items])=>({label,items}));
                 }
 
+                // Apply custom group ordering
+                if (groupBy!=="none" && groupOrder.length > 0) {
+                  groups.sort((a,b) => {
+                    const ai = groupOrder.indexOf(a.label);
+                    const bi = groupOrder.indexOf(b.label);
+                    if (ai===-1 && bi===-1) return 0;
+                    if (ai===-1) return 1;
+                    if (bi===-1) return -1;
+                    return ai - bi;
+                  });
+                }
+                // Auto-update groupOrder when new groups appear
+                if (groupBy!=="none") {
+                  const labels = groups.map(g=>g.label);
+                  const needsUpdate = labels.some(l=>!groupOrder.includes(l));
+                  if (needsUpdate || groupOrder.length !== labels.length) {
+                    const merged = [...groupOrder.filter(l=>labels.includes(l)), ...labels.filter(l=>!groupOrder.includes(l))];
+                    if (JSON.stringify(merged) !== JSON.stringify(groupOrder)) {
+                      setTimeout(()=>{setGroupOrder(merged);saveSettings({groupOrder:merged});},0);
+                    }
+                  }
+                }
+
                 if (filtered.length===0) return <div style={{textAlign:"center",padding:"30px 0",color:"#94a3b8",fontSize:13}}>No tools match the current filters</div>;
 
                 return groups.map((group,gi) => (
                   <div key={gi}>
                     {group.label && (
-                      <div style={{fontSize:11,fontWeight:700,letterSpacing:"0.14em",textTransform:"uppercase",color:"#F4442E",marginBottom:8,marginTop:gi>0?18:0,paddingBottom:6,borderBottom:"1.5px solid #F4442E22"}}>{group.label} <span style={{color:"#94a3b8",fontWeight:400}}>({group.items.length})</span></div>
+                      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,marginTop:gi>0?18:0,paddingBottom:6,borderBottom:"1.5px solid #F4442E22"}}>
+                        <span style={{fontSize:11,fontWeight:700,letterSpacing:"0.14em",textTransform:"uppercase",color:"#F4442E",flex:1}}>{group.label} <span style={{color:"#94a3b8",fontWeight:400}}>({group.items.length})</span></span>
+                        <button onClick={()=>moveGroup(group.label,-1)} title="Move group up" style={{fontSize:10,padding:"2px 6px",border:"1px solid #e2e8f0",borderRadius:4,background:"#f8fafc",color:"#64748b",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>▲</button>
+                        <button onClick={()=>moveGroup(group.label,1)} title="Move group down" style={{fontSize:10,padding:"2px 6px",border:"1px solid #e2e8f0",borderRadius:4,background:"#f8fafc",color:"#64748b",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>▼</button>
+                      </div>
                     )}
                     {group.items.map(t=>{
                 const cats = t.categories || [t.category||"Other"];
