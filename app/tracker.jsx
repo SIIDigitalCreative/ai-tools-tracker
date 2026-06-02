@@ -523,7 +523,7 @@ export default function AITracker() {
                         </>
                       :<>
                         <div style={{fontSize:16,fontWeight:700,fontFamily:"'Space Grotesk',sans-serif"}}>{fmt(parseFloat(t.amount)||0,t.currency)}</div>
-                        <div style={{fontSize:10,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.1em"}}>per {t.billing==="monthly"?"month":"year"}</div>
+                        <div style={{fontSize:10,color:"#F4442E",fontWeight:600,textTransform:"uppercase",letterSpacing:"0.1em"}}>PER {t.billing==="monthly"?"MONTH":"YEAR"}</div>
                         <div style={{fontSize:11,color:"#64748b",marginTop:2}}>≈ {fmt(toMonthly(t),t.currency)}/mo · {fmt(toAnnual(t),t.currency)}/yr</div>
                       </>}
                       <div className="tool-cost-btns" style={{display:"flex",gap:6,justifyContent:"flex-end",marginTop:8}}>
