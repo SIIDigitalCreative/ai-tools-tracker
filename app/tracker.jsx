@@ -74,52 +74,13 @@ const EMPTY_FORM = {
   notes:""
 };
 
-// ── FavIcon component — tries multiple sources, falls back to letter avatar ───
-function FavIcon({ url, name, color, bg }) {
-  const domain = url.replace(/https?:\/\/(www\.)?/, "").split("/")[0];
-  const sources = [
-    `https://www.google.com/s2/favicons?domain=${domain}&sz=64`,
-    `https://icons.duckduckgo.com/ip3/${domain}.ico`,
-    `https://${domain}/favicon.ico`,
-  ];
-  const [idx, setIdx] = useState(0);
-  const [failed, setFailed] = useState(false);
-
-  // Reset when url changes
-  useEffect(() => { setIdx(0); setFailed(false); }, [url]);
-
-  const tryNext = () => {
-    if (idx + 1 < sources.length) setIdx(i => i + 1);
-    else setFailed(true);
-  };
-
-  return (
-    <div style={{width:44,height:44,borderRadius:10,background:bg,border:`1.5px solid ${color}33`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,overflow:"hidden",position:"relative"}}>
-      {!failed && (
-        <img
-          key={sources[idx]}
-          src={sources[idx]}
-          alt=""
-          width={28} height={28}
-          style={{borderRadius:4,objectFit:"contain"}}
-          onError={tryNext}
-        />
-      )}
-      {failed && (
-        <span style={{fontFamily:"'Space Grotesk',sans-serif",fontSize:18,fontWeight:700,color}}>
-          {name.charAt(0).toUpperCase()}
-        </span>
-      )}
-    </div>
-  );
-}
-
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function AITracker() {
   const [tools,setTools]             = useState([]);
   const [companyName,setCompanyName] = useState("");
   const [editingName,setEditingName] = useState(false);
   const [adding,setAdding]           = useState(false);
+  const [inlineEditId,setInlineEditId] = useState(null);
   const [isAuthed,setIsAuthed]       = useState(false);
   const [showPwModal,setShowPwModal] = useState(false);
   const [pwInput,setPwInput]         = useState("");
@@ -260,12 +221,16 @@ export default function AITracker() {
       endDate:t.endDate||"",
       notes:t.notes||""
     });
-    setEditId(t.id); setAdding(true);
+    setEditId(t.id);
+    setInlineEditId(t.id);
+    setAdding(false);
   };
 
-  // Cost helpers
-  const toMonthly = t => { const a=parseFloat(t.amount)||0; return t.billing==="annual"?a/12:t.billing==="monthly"?a:0; };
-  const toAnnual  = t => { const a=parseFloat(t.amount)||0; return t.billing==="monthly"?a*12:t.billing==="annual"?a:0; };
+  // Cost helpers — always convert to PHP for totals
+  const RATES = {PHP:1, USD:56, EUR:61, GBP:72};
+  const toPHP = (amount, currency) => (parseFloat(amount)||0) * (RATES[currency]||1);
+  const toMonthly = t => { const a=toPHP(t.amount,t.currency); return t.billing==="annual"?a/12:t.billing==="monthly"?a:0; };
+  const toAnnual  = t => { const a=toPHP(t.amount,t.currency); return t.billing==="monthly"?a*12:t.billing==="annual"?a:0; };
   const totalMonthly = tools.reduce((s,t)=>s+toMonthly(t),0);
   const totalAnnual  = tools.reduce((s,t)=>s+toAnnual(t),0);
   const fmt = (n,cur) => { const sym=cur==="PHP"?"₱":cur==="USD"?"$":cur==="EUR"?"€":cur+" "; return sym+(n||0).toLocaleString("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2}); };
@@ -437,8 +402,19 @@ export default function AITracker() {
               </div>
               <div>
                 <label style={lbl}>Currency</label>
-                <select style={inp} value={form.currency} onChange={e=>setForm(f=>({...f,currency:e.target.value}))}>
-                  {["PHP","USD","EUR","GBP"].map(c=><option key={c}>{c}</option>)}
+                <select style={inp} value={form.currency} onChange={e=>{
+                  const newCur = e.target.value;
+                  const rates = {PHP:1,USD:56,EUR:61,GBP:72}; // approx rates
+                  const amt = parseFloat(form.amount)||0;
+                  if(amt>0 && form.currency!==newCur) {
+                    const inPHP = amt * rates[form.currency];
+                    const converted = (inPHP / rates[newCur]).toFixed(2);
+                    setForm(f=>({...f,currency:newCur,amount:converted}));
+                  } else {
+                    setForm(f=>({...f,currency:newCur}));
+                  }
+                }}>
+                  {["PHP","USD","EUR","GBP"].map(cur=><option key={cur}>{cur}</option>)}
                 </select>
               </div>
               <div>
@@ -477,28 +453,37 @@ export default function AITracker() {
                 return (
                   <div key={t.id} className="tool-card" style={{background:"#fff",border:"1.5px solid #e2e8f0",borderRadius:10,padding:"14px 14px",display:"flex",alignItems:"flex-start",gap:12,flexWrap:"wrap"}}>
                     {/* Favicon */}
-                    <FavIcon url={t.url} name={t.name} color={catColor(cats[0]).color} bg={catColor(cats[0]).bg} />
+                    <div style={{width:44,height:44,borderRadius:10,background:catColor(cats[0]).bg,border:`1.5px solid ${catColor(cats[0]).color}33`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,overflow:"hidden",position:"relative"}}>
+                      <img
+                        src={`https://www.google.com/s2/favicons?domain=${t.url.replace(/https?:\/\/(www\.)?/,"")}&sz=64`}
+                        alt=""
+                        width={28} height={28}
+                        style={{borderRadius:4,objectFit:"contain"}}
+                        onError={e=>{e.target.style.display="none"; e.target.nextSibling.style.display="flex";}}
+                      />
+                      <span style={{display:"none",position:"absolute",inset:0,alignItems:"center",justifyContent:"center",fontFamily:"'Space Grotesk',sans-serif",fontSize:18,fontWeight:700,color:catColor(cats[0]).color}}>
+                        {t.name.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
                     {/* Info */}
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:4,flexWrap:"wrap"}}>
                         <span style={{fontFamily:"'Space Grotesk',sans-serif",fontSize:15,fontWeight:600}}>{t.name}</span>
                         {/* Status badge */}
                         <span style={{fontSize:9,fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase",padding:"2px 8px",borderRadius:3,background:sc.bg,color:sc.color}}>{t.status||"Active"}</span>
-                        <a href={t.url} target="_blank" rel="noreferrer" style={{fontSize:11,color:"#94a3b8",textDecoration:"none"}}>↗ {t.url.replace(/https?:\/\/(www\.)?/,"")}</a>
-                      </div>
-                      {t.purpose&&<div style={{fontSize:12,color:"#475569",lineHeight:1.5,marginBottom:t.notes?3:4}}>{t.purpose}</div>}
-                      {t.notes&&<div style={{fontSize:11,color:"#94a3b8",fontStyle:"italic",marginBottom:4}}>{t.notes}</div>}
-                      {/* Category badges — beneath description */}
-                      <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:2}}>
+                        {/* Category badges */}
                         {cats.map(cat=>(
                           <span key={cat} style={{fontSize:9,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",padding:"2px 8px",borderRadius:3,background:catColor(cat).bg,color:catColor(cat).color}}>{cat}</span>
                         ))}
+                        <a href={t.url} target="_blank" rel="noreferrer" style={{fontSize:11,color:"#94a3b8",textDecoration:"none"}}>↗ {t.url.replace(/https?:\/\/(www\.)?/,"")}</a>
                       </div>
+                      {t.purpose&&<div style={{fontSize:12,color:"#475569",lineHeight:1.5,marginBottom:t.notes?3:0}}>{t.purpose}</div>}
+                      {t.notes&&<div style={{fontSize:11,color:"#94a3b8",fontStyle:"italic",marginBottom:3}}>{t.notes}</div>}
                       {/* End date */}
                       {t.endDate&&(
                         <div style={{fontSize:11,color:daysLeft!==null&&daysLeft<=30?"#dc2626":"#64748b",marginTop:2}}>
                           📅 Ends {new Date(t.endDate).toLocaleDateString("en-PH",{month:"short",day:"numeric",year:"numeric"})}
-                          {daysLeft!==null&&daysLeft>=0&&<span style={{marginLeft:6,fontWeight:600}}>{daysLeft<=30?`⚠ ${daysLeft} ${daysLeft===1?"day":"days"} left`:`(${daysLeft} ${daysLeft===1?"day":"days"})`}</span>}
+                          {daysLeft!==null&&daysLeft>=0&&<span style={{marginLeft:6,fontWeight:600}}>{daysLeft<=30?`⚠ ${daysLeft} days left`:`(${daysLeft} days)`}</span>}
                           {daysLeft!==null&&daysLeft<0&&<span style={{marginLeft:6,color:"#dc2626",fontWeight:600}}>Expired</span>}
                         </div>
                       )}
