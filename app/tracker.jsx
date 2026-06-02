@@ -491,7 +491,7 @@ export default function AITracker() {
                       <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",marginBottom:4}}>
                         <span style={{fontFamily:"'Space Grotesk',sans-serif",fontSize:15,fontWeight:600}}>{t.name}</span>
                         <span style={{fontSize:9,fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase",padding:"2px 8px",borderRadius:3,background:sc.bg,color:sc.color}}>{t.status||"Active"}</span>
-                        <a href={t.url} target="_blank" rel="noreferrer" style={{fontSize:11,color:"#94a3b8",textDecoration:"none"}}>↗ {t.url.replace(/https?:\/\/(www\.)?/,"")}</a>
+                        <a href={t.url} target="_blank" rel="noreferrer" style={{fontSize:11,color:"#898b8e",textDecoration:"none"}}>↗ {t.url.replace(/https?:\/\/(www\.)?/,"")}</a>
                       </div>
                       {t.purpose&&<div style={{fontSize:12,color:"#475569",lineHeight:1.5,marginBottom:4}}>{t.purpose}</div>}
                       {/* Row 3: categories */}
@@ -500,7 +500,7 @@ export default function AITracker() {
                           <span key={cat} style={{fontSize:9,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",padding:"2px 7px",borderRadius:3,background:catColor(cat).bg,color:catColor(cat).color}}>{cat}</span>
                         ))}
                       </div>
-                      {t.notes&&<div style={{fontSize:11,color:"#94a3b8",fontStyle:"italic",marginBottom:3}}>{t.notes}</div>}
+                      {t.notes&&<div style={{fontSize:11,color:"#898b8e",fontStyle:"italic",marginBottom:3}}>{t.notes}</div>}
                       {/* End date */}
                       {t.endDate&&(
                         <div style={{fontSize:11,color:daysLeft!==null&&daysLeft<=30?"#dc2626":"#64748b",marginTop:2}}>
@@ -514,17 +514,17 @@ export default function AITracker() {
                     <div className="tool-cost" style={{textAlign:"right",flexShrink:0,minWidth:110}}>
                       {t.billing==="free"?<div style={{fontSize:14,fontWeight:700,color:"#10b981"}}>Free</div>
                       :t.billing==="credits"?<>
-                          <div style={{fontSize:12,fontWeight:700,color:"#f59e0b"}}>Credits</div>
+                          <div style={{fontSize:10,fontWeight:600,color:"#F4442E",textTransform:"uppercase",letterSpacing:"0.1em"}}>Credits</div>
                           {parseFloat(t.amount)>0&&<>
-                            <div style={{fontSize:14,fontWeight:700,color:"#0f172a"}}>{fmt(parseFloat(t.amount),t.currency)}</div>
-                            {t.currency!=="PHP"&&<div style={{fontSize:10,color:"#F4442E",fontWeight:500}}>≈ {fmt(toPHP(t.amount,t.currency),"PHP")} PHP</div>}
+                            <div style={{fontSize:15,fontWeight:700,fontFamily:"'Space Grotesk',sans-serif",color:"#0f172a"}}>{fmt(parseFloat(t.amount),t.currency)}</div>
+                            {t.currency!=="PHP"&&<div style={{fontSize:11,color:"#898b8e"}}>≈ {fmt(toPHP(t.amount,t.currency),"PHP")}</div>}
                           </>}
-                          <div style={{fontSize:9,color:"#F4442E",fontWeight:600,textTransform:"uppercase",letterSpacing:"0.08em"}}>PAY-AS-GO</div>
+                          <div style={{fontSize:10,fontWeight:600,color:"#F4442E",textTransform:"uppercase",letterSpacing:"0.1em"}}>PAY-AS-GO</div>
                         </>
                       :<>
-                        <div style={{fontSize:16,fontWeight:700,fontFamily:"'Space Grotesk',sans-serif"}}>{fmt(parseFloat(t.amount)||0,t.currency)}</div>
-                        <div style={{fontSize:10,color:"#F4442E",fontWeight:600,textTransform:"uppercase",letterSpacing:"0.1em"}}>PER {t.billing==="monthly"?"MONTH":"YEAR"}</div>
-                        <div style={{fontSize:11,color:"#64748b",marginTop:2}}>≈ {fmt(toMonthly(t),t.currency)}/mo · {fmt(toAnnual(t),t.currency)}/yr</div>
+                        <div style={{fontSize:15,fontWeight:700,fontFamily:"'Space Grotesk',sans-serif",color:"#0f172a"}}>{fmt(parseFloat(t.amount)||0,t.currency)}</div>
+                        <div style={{fontSize:10,fontWeight:600,color:"#F4442E",textTransform:"uppercase",letterSpacing:"0.1em"}}>PER {t.billing==="monthly"?"MONTH":"YEAR"}</div>
+                        <div style={{fontSize:11,color:"#898b8e",marginTop:2}}>≈ {fmt(toMonthly(t),"PHP")}/mo · {fmt(toAnnual(t),"PHP")}/yr</div>
                       </>}
                       <div className="tool-cost-btns" style={{display:"flex",gap:6,justifyContent:"flex-end",marginTop:8}}>
                         <button onClick={()=>requireAuth("edit",t)} style={{fontSize:11,padding:"4px 10px",border:"1px solid #e2e8f0",borderRadius:5,background:"#f8fafc",color:"#64748b",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Edit</button>
