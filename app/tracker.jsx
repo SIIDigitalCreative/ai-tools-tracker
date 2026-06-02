@@ -77,7 +77,7 @@ const EMPTY_FORM = {
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function AITracker() {
   const [tools,setTools]             = useState([]);
-  const [companyName,setCompanyName] = useState("Sunbeams Lifestyle");
+  const [companyName,setCompanyName] = useState("");
   const [editingName,setEditingName] = useState(false);
   const [adding,setAdding]           = useState(false);
   const [isAuthed,setIsAuthed]       = useState(false);
@@ -249,9 +249,19 @@ export default function AITracker() {
   return (
     <div style={{fontFamily:"'DM Sans',sans-serif",background:"#FFF5F2",minHeight:"100vh",color:"#0f172a",fontSize:14}}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+      <style>{`
+        * { box-sizing: border-box; }
+        body { margin: 0; }
+        @media (max-width: 600px) {
+          .tool-card { flex-wrap: wrap; }
+          .tool-cost { width: 100%; text-align: left !important; margin-top: 8px; border-top: 1px solid #f1f5f9; padding-top: 10px; }
+          .tool-cost-btns { justify-content: flex-start !important; }
+          .form-grid-2 { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
 
       {/* HEADER */}
-      <div style={{background:"linear-gradient(135deg,#F4442E 0%,#FFB27D 100%)",padding:"32px 36px 28px",position:"relative",overflow:"hidden"}}>
+      <div style={{background:"linear-gradient(135deg,#F4442E 0%,#FFB27D 100%)",padding:"28px 20px 24px",position:"relative",overflow:"hidden"}}>
         <div style={{position:"absolute",top:-40,right:-40,width:220,height:220,borderRadius:"50%",background:"rgba(255,255,255,0.12)"}}/>
         <div style={{position:"absolute",bottom:-20,left:80,width:140,height:140,borderRadius:"50%",background:"rgba(255,255,255,0.08)"}}/>
         <div style={{position:"relative"}}>
@@ -270,7 +280,7 @@ export default function AITracker() {
             <button onClick={()=>setEditingName(true)} style={{background:"rgba(255,255,255,0.2)",border:"1px solid rgba(255,255,255,0.4)",borderRadius:4,padding:"3px 10px",color:"#fff",fontSize:10,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>✏ Edit</button>
           </div>
           <div style={{fontSize:13,color:"rgba(255,255,255,0.9)",marginBottom:24}}>All AI subscriptions in one place — synced live</div>
-          <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"center"}}>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,maxWidth:480}}>
             {[{label:"Total Tools",value:tools.length},{label:"Monthly Cost",value:fmt(totalMonthly,"PHP")},{label:"Annual Cost",value:fmt(totalAnnual,"PHP")}].map(s=>(
               <div key={s.label} style={{background:"rgba(255,255,255,0.2)",border:"1px solid rgba(255,255,255,0.3)",borderRadius:8,padding:"10px 18px"}}>
                 <div style={{fontSize:18,fontWeight:700,color:"#fff",fontFamily:"'Space Grotesk',sans-serif"}}>{s.value}</div>
@@ -282,7 +292,7 @@ export default function AITracker() {
         </div>
       </div>
 
-      <div style={{maxWidth:960,margin:"0 auto",padding:"24px 20px 80px"}}>
+      <div style={{maxWidth:960,margin:"0 auto",padding:"20px 14px 80px"}}>
 
         {/* Add button */}
         {!adding && (
@@ -299,7 +309,7 @@ export default function AITracker() {
             <div style={{fontFamily:"'Space Grotesk',sans-serif",fontSize:16,fontWeight:600,marginBottom:20}}>{editId?"Edit Tool":"Add New AI Tool"}</div>
 
             {/* Name + URL */}
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:14,marginBottom:14}}>
               <div>
                 <label style={lbl}>Tool Name *</label>
                 <input style={inp} value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder="e.g. Claude, Midjourney"/>
@@ -371,7 +381,7 @@ export default function AITracker() {
             </div>
 
             {/* Billing + Amount + Currency + End Date */}
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 100px 130px",gap:14,marginBottom:14}}>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:14,marginBottom:14}}>
               <div>
                 <label style={lbl}>Billing Cycle</label>
                 <select style={inp} value={form.billing} onChange={e=>setForm(f=>({...f,billing:e.target.value}))}>
@@ -425,10 +435,19 @@ export default function AITracker() {
                 const sc   = statColor(t.status||"Active");
                 const daysLeft = t.endDate ? Math.ceil((new Date(t.endDate)-new Date())/(1000*60*60*24)) : null;
                 return (
-                  <div key={t.id} style={{background:"#fff",border:"1.5px solid #e2e8f0",borderRadius:10,padding:"16px 18px",display:"flex",alignItems:"flex-start",gap:14}}>
+                  <div key={t.id} className="tool-card" style={{background:"#fff",border:"1.5px solid #e2e8f0",borderRadius:10,padding:"14px 14px",display:"flex",alignItems:"flex-start",gap:12,flexWrap:"wrap"}}>
                     {/* Favicon */}
-                    <div style={{width:40,height:40,borderRadius:10,background:catColor(cats[0]).bg,border:`1.5px solid ${catColor(cats[0]).color}33`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,overflow:"hidden"}}>
-                      <img src={`https://www.google.com/s2/favicons?domain=${t.url}&sz=32`} alt="" width={20} height={20} style={{borderRadius:3}} onError={e=>{e.target.style.display="none";}}/>
+                    <div style={{width:44,height:44,borderRadius:10,background:catColor(cats[0]).bg,border:`1.5px solid ${catColor(cats[0]).color}33`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,overflow:"hidden",position:"relative"}}>
+                      <img
+                        src={`https://www.google.com/s2/favicons?domain=${t.url.replace(/https?:\/\/(www\.)?/,"")}&sz=64`}
+                        alt=""
+                        width={28} height={28}
+                        style={{borderRadius:4,objectFit:"contain"}}
+                        onError={e=>{e.target.style.display="none"; e.target.nextSibling.style.display="flex";}}
+                      />
+                      <span style={{display:"none",position:"absolute",inset:0,alignItems:"center",justifyContent:"center",fontFamily:"'Space Grotesk',sans-serif",fontSize:18,fontWeight:700,color:catColor(cats[0]).color}}>
+                        {t.name.charAt(0).toUpperCase()}
+                      </span>
                     </div>
                     {/* Info */}
                     <div style={{flex:1,minWidth:0}}>
@@ -454,7 +473,7 @@ export default function AITracker() {
                       )}
                     </div>
                     {/* Cost */}
-                    <div style={{textAlign:"right",flexShrink:0}}>
+                    <div className="tool-cost" style={{textAlign:"right",flexShrink:0,minWidth:110}}>
                       {t.billing==="free"?<div style={{fontSize:14,fontWeight:700,color:"#10b981"}}>Free</div>
                       :t.billing==="credits"?<div style={{fontSize:14,fontWeight:700,color:"#f59e0b"}}>Credits</div>
                       :<>
@@ -462,7 +481,7 @@ export default function AITracker() {
                         <div style={{fontSize:10,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.1em"}}>per {t.billing==="monthly"?"month":"year"}</div>
                         <div style={{fontSize:11,color:"#64748b",marginTop:2}}>≈ {fmt(toMonthly(t),t.currency)}/mo · {fmt(toAnnual(t),t.currency)}/yr</div>
                       </>}
-                      <div style={{display:"flex",gap:6,justifyContent:"flex-end",marginTop:8}}>
+                      <div className="tool-cost-btns" style={{display:"flex",gap:6,justifyContent:"flex-end",marginTop:8}}>
                         <button onClick={()=>requireAuth("edit",t)} style={{fontSize:11,padding:"4px 10px",border:"1px solid #e2e8f0",borderRadius:5,background:"#f8fafc",color:"#64748b",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Edit</button>
                         <button onClick={()=>requireAuth("delete",t.id)} style={{fontSize:11,padding:"4px 10px",border:"1px solid #fecdd3",borderRadius:5,background:"#fff1f2",color:"#e11d48",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Delete</button>
                       </div>
@@ -495,7 +514,7 @@ export default function AITracker() {
                   );
                 })}
               </div>
-              <div style={{borderTop:"1px solid rgba(255,255,255,0.2)",paddingTop:18,display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:16}}>
+              <div style={{borderTop:"1px solid rgba(255,255,255,0.2)",paddingTop:18,display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>
                 {[{label:"Total Tools",value:tools.length},{label:"Monthly Total",value:fmt(totalMonthly,"PHP")},{label:"Annual Total",value:fmt(totalAnnual,"PHP")}].map(s=>(
                   <div key={s.label} style={{textAlign:"center"}}>
                     <div style={{fontFamily:"'Space Grotesk',sans-serif",fontSize:22,fontWeight:700,color:"#fff"}}>{s.value}</div>
