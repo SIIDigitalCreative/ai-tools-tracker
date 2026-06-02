@@ -554,7 +554,7 @@ export default function AITracker() {
                         <div style={{marginBottom:12}}>
                           <label style={lbl}>Categories</label>
                           <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}} id={`cat-container-${t.id}`}>
-                            {DEFAULT_CATS.map(cat=>{
+                            {[...DEFAULT_CATS, ...(t.categories||[]).filter(c=>!DEFAULT_CATS.includes(c))].map(cat=>{
                               const cats2 = t.categories||[t.category||"Other"];
                               const sel = cats2.includes(cat);
                               const ci=catColor(cat);
@@ -570,9 +570,10 @@ export default function AITracker() {
                                   btn.style.color=isSel?"#64748b":ci.color;
                                   btn.style.fontWeight=isSel?"400":"600";
                                   btn.style.background=isSel?"#f8fafc":ci.bg;
+                                  btn.textContent=isSel?cat:`✓ ${cat}`;
                                 }}
                                 style={{padding:"4px 10px",borderRadius:20,border:`1.5px solid ${sel?ci.color:"#e2e8f0"}`,background:sel?ci.bg:"#f8fafc",color:sel?ci.color:"#64748b",fontSize:11,fontWeight:sel?600:400,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
-                                {cat}
+                                {sel?`✓ ${cat}`:cat}
                               </button>;
                             })}
                           </div>
@@ -616,7 +617,7 @@ export default function AITracker() {
                         <div style={{marginBottom:12}}>
                           <label style={lbl}>Status</label>
                           <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}} id={`stat-container-${t.id}`}>
-                            {DEFAULT_STATUSES.map(s=>{
+                            {[...DEFAULT_STATUSES, ...(!DEFAULT_STATUSES.includes(t.status||"Active")?[t.status||"Active"]:[])].map(s=>{
                               const sel=(t.status||"Active")===s;
                               const sc2=statColor(s);
                               return <button key={s} type="button"
@@ -630,14 +631,16 @@ export default function AITracker() {
                                     b.style.borderColor="#e2e8f0";
                                     b.style.color="#64748b";
                                     b.style.fontWeight="400";
+                                    b.textContent=b.getAttribute("data-status");
                                   });
                                   e.currentTarget.setAttribute("data-sel","1");
                                   e.currentTarget.style.background=sc2.bg;
                                   e.currentTarget.style.borderColor=sc2.color;
                                   e.currentTarget.style.color=sc2.color;
                                   e.currentTarget.style.fontWeight="600";
+                                  e.currentTarget.textContent=`✓ ${s}`;
                                 }}
-                                style={{padding:"4px 10px",borderRadius:20,border:`1.5px solid ${sel?sc2.color:"#e2e8f0"}`,background:sel?sc2.bg:"#f8fafc",color:sel?sc2.color:"#64748b",fontSize:11,fontWeight:sel?600:400,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>{s}</button>;
+                                style={{padding:"4px 10px",borderRadius:20,border:`1.5px solid ${sel?sc2.color:"#e2e8f0"}`,background:sel?sc2.bg:"#f8fafc",color:sel?sc2.color:"#64748b",fontSize:11,fontWeight:sel?600:400,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>{sel?`✓ ${s}`:s}</button>;
                             })}
                           </div>
                           {/* Custom status input */}
