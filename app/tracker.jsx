@@ -71,6 +71,8 @@ const EMPTY_FORM = {
   status:"Active",
   customStatus:"",
   endDate:"",
+  isTrial:false,
+  trialEndDate:"",
   notes:""
 };
 
@@ -280,6 +282,8 @@ export default function AITracker() {
       status:t.status||"Active",
       customStatus:"",
       endDate:t.endDate||"",
+      isTrial:t.isTrial||false,
+      trialEndDate:t.trialEndDate||"",
       notes:t.notes||""
     });
     setEditId(t.id);
@@ -491,6 +495,21 @@ export default function AITracker() {
               </div>
             </div>
 
+            {/* Trial toggle */}
+            <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:14,padding:"10px 14px",background:form.isTrial?"#fff4e6":"#f8fafc",border:`1.5px solid ${form.isTrial?"#d97706":"#e2e8f0"}`,borderRadius:8,transition:"all 0.18s"}}>
+              <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",flex:1}}>
+                <input type="checkbox" checked={form.isTrial} onChange={e=>setForm(f=>({...f,isTrial:e.target.checked}))}
+                  style={{width:16,height:16,accentColor:"#d97706",cursor:"pointer"}}/>
+                <span style={{fontSize:13,fontWeight:form.isTrial?600:400,color:form.isTrial?"#d97706":"#64748b"}}>Currently on trial / free trial</span>
+              </label>
+              {form.isTrial&&(
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <span style={{fontSize:11,fontWeight:600,color:"#d97706",letterSpacing:"0.08em",textTransform:"uppercase"}}>Trial ends:</span>
+                  <input type="date" style={{...inp,width:160,padding:"6px 10px"}} value={form.trialEndDate} onChange={e=>setForm(f=>({...f,trialEndDate:e.target.value}))}/>
+                </div>
+              )}
+            </div>
+
             {/* Notes */}
             <div style={{marginBottom:20}}>
               <label style={lbl}>Notes</label>
@@ -666,6 +685,7 @@ export default function AITracker() {
                       <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",marginBottom:4}}>
                         <span style={{fontFamily:"'Space Grotesk',sans-serif",fontSize:15,fontWeight:600}}>{t.name}</span>
                         <span style={{fontSize:9,fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase",padding:"2px 8px",borderRadius:3,background:sc.bg,color:sc.color}}>{t.status||"Active"}</span>
+                        {t.isTrial&&<span style={{fontSize:9,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",padding:"2px 7px",borderRadius:3,background:"#fff4e6",color:"#d97706",border:"1px solid #d9770633"}}>Trial</span>}
                         <a href={t.url} target="_blank" rel="noreferrer" style={{fontSize:11,color:"#898b8e",textDecoration:"none"}}>↗ {t.url.replace(/https?:\/\/(www\.)?/,"")}</a>
                       </div>
                       {t.purpose&&<div style={{fontSize:12,color:"#475569",lineHeight:1.5,marginBottom:4}}>{t.purpose}</div>}
@@ -676,6 +696,15 @@ export default function AITracker() {
                         ))}
                       </div>
                       {t.notes&&<div style={{fontSize:11,color:"#898b8e",fontStyle:"italic",marginBottom:3}}>{t.notes}</div>}
+                      {/* Trial end date */}
+                      {t.isTrial&&t.trialEndDate&&(()=>{
+                        const td=Math.ceil((new Date(t.trialEndDate)-new Date())/(1000*60*60*24));
+                        return <div style={{fontSize:11,color:td<=7?"#dc2626":"#d97706",marginBottom:3}}>
+                          ⏳ Trial ends {new Date(t.trialEndDate).toLocaleDateString("en-PH",{month:"short",day:"numeric",year:"numeric"})}
+                          {td>=0&&<span style={{marginLeft:5,fontWeight:600}}>{td<=7?`⚠ ${td} ${td===1?"day":"days"} left`:`(${td} ${td===1?"day":"days"})`}</span>}
+                          {td<0&&<span style={{marginLeft:5,color:"#dc2626",fontWeight:600}}>Expired</span>}
+                        </div>;
+                      })()}
                       {/* End date */}
                       {t.endDate&&(
                         <div style={{fontSize:11,color:daysLeft!==null&&daysLeft<=30?"#dc2626":"#64748b",marginTop:2}}>
@@ -879,6 +908,25 @@ export default function AITracker() {
                           </div>
                         </div>
 
+                        {/* Trial toggle */}
+                        <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:14,padding:"10px 14px",background:t.isTrial?"#fff4e6":"#f8fafc",border:`1.5px solid ${t.isTrial?"#d97706":"#e2e8f0"}`,borderRadius:8}}>
+                          <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",flex:1}}>
+                            <input type="checkbox" defaultChecked={t.isTrial||false} id={`edit-trial-${t.id}`}
+                              style={{width:16,height:16,accentColor:"#d97706",cursor:"pointer"}}
+                              onChange={e=>{
+                                const wrap=e.target.closest("div[style]");
+                                const dateWrap=document.getElementById(`trial-date-wrap-${t.id}`);
+                                if(e.target.checked){wrap.style.background="#fff4e6";wrap.style.borderColor="#d97706";if(dateWrap)dateWrap.style.display="flex";}
+                                else{wrap.style.background="#f8fafc";wrap.style.borderColor="#e2e8f0";if(dateWrap)dateWrap.style.display="none";}
+                              }}/>
+                            <span style={{fontSize:13,fontWeight:t.isTrial?600:400,color:t.isTrial?"#d97706":"#64748b"}}>Currently on trial</span>
+                          </label>
+                          <div id={`trial-date-wrap-${t.id}`} style={{display:t.isTrial?"flex":"none",alignItems:"center",gap:8}}>
+                            <span style={{fontSize:11,fontWeight:600,color:"#d97706",letterSpacing:"0.08em",textTransform:"uppercase"}}>Ends:</span>
+                            <input type="date" style={{...inp,width:160,padding:"6px 10px"}} defaultValue={t.trialEndDate||""} id={`edit-trialdate-${t.id}`}/>
+                          </div>
+                        </div>
+
                         <div style={{marginBottom:16}}>
                           <label style={lbl}>Notes</label>
                           <input style={inp} defaultValue={t.notes||""} id={`edit-notes-${t.id}`}/>
@@ -900,6 +948,8 @@ export default function AITracker() {
                             const statBtn = document.querySelector(`.stat-btn-${t.id}[data-sel="1"]`);
                             const status = statBtn?.getAttribute("data-status")||t.status||"Active";
 
+                            const isTrial = document.getElementById(`edit-trial-${t.id}`)?.checked||false;
+                            const trialEndDate = document.getElementById(`edit-trialdate-${t.id}`)?.value||"";
                             const updated = tools.map(x => x.id===t.id ? {
                               ...x,
                               name, url,
@@ -910,6 +960,8 @@ export default function AITracker() {
                               endDate: getId("enddate"),
                               currency: getId("currency"),
                               amount: getId("amount"),
+                              isTrial,
+                              trialEndDate,
                               notes: getId("notes"),
                             } : x);
                             save(updated);
