@@ -58,65 +58,10 @@ const CATS = [
 const catInfo = l => CATS.find(c => c.label === l) || CATS[CATS.length-1];
 const makeId  = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
 
-// ── Favicon component — multi-source with letter fallback ────────────────────
-function ToolIcon({ url, name, bg, color }) {
-  const [src, setSrc] = useState(null);
-  const [failed, setFailed] = useState(false);
-
-  useEffect(() => {
-    if (!url) { setFailed(true); return; }
-    try {
-      const domain = new URL(url.startsWith("http") ? url : "https://" + url).hostname.replace(/^www\./, "");
-      // Try multiple favicon sources in order
-      const sources = [
-        `https://icons.duckduckgo.com/ip3/${domain}.ico`,
-        `https://favicon.im/${domain}?larger=true`,
-        `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://${domain}&size=64`,
-      ];
-      setSrc(sources[0]);
-      setFailed(false);
-    } catch { setFailed(true); }
-  }, [url]);
-
-  const letter = (name || "?")[0].toUpperCase();
-
-  if (failed || !src) {
-    return (
-      <div style={{ width:40, height:40, borderRadius:10, background:bg, border:`1.5px solid ${color}33`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontFamily:"'Space Grotesk',sans-serif", fontSize:18, fontWeight:700, color:color }}>
-        {letter}
-      </div>
-    );
-  }
-
-  return (
-    <div style={{ width:40, height:40, borderRadius:10, background:bg, border:`1.5px solid ${color}33`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, overflow:"hidden" }}>
-      <img
-        src={src}
-        alt=""
-        width={24}
-        height={24}
-        style={{ borderRadius:4, objectFit:"contain" }}
-        onError={() => {
-          // Try next source
-          try {
-            const domain = new URL(url.startsWith("http") ? url : "https://" + url).hostname.replace(/^www\./, "");
-            const sources = [
-              `https://icons.duckduckgo.com/ip3/${domain}.ico`,
-              `https://favicon.im/${domain}?larger=true`,
-              `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://${domain}&size=64`,
-            ];
-            const idx = sources.indexOf(src);
-            if (idx < sources.length - 1) { setSrc(sources[idx + 1]); }
-            else { setFailed(true); }
-          } catch { setFailed(true); }
-        }}
-      />
-    </div>
-  );
-}
+// ── Component ─────────────────────────────────────────────────────────────────
 export default function AITracker() {
   const [tools,setTools]               = useState([]);
-  const [companyName,setCompanyName]   = useState("");
+  const [companyName,setCompanyName]   = useState("Sunbeams Lifestyle");
   const [editingName,setEditingName]   = useState(false);
   const nameRef = useRef(null);
   const [adding,setAdding]             = useState(false);
@@ -129,33 +74,18 @@ export default function AITracker() {
 
   // Load on mount
   useEffect(() => {
-    loadFromRedis().then(data => {
-      if (Array.isArray(data)) {
-        setTools(data);
-      } else if (data && typeof data === "object") {
-        if (data.tools) setTools(data.tools);
-        if (data.companyName) setCompanyName(data.companyName);
-      }
-    });
+    loadFromRedis().then(t => setTools(t));
   }, []);
 
   // Debounced save to Redis
-  const save = (updated, name = companyName) => {
+  const save = (updated) => {
     setTools(updated);
     setSyncStatus("saving");
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
-      await saveToRedis({ tools: updated, companyName: name });
+      await saveToRedis(updated);
       setSyncStatus("saved");
       setTimeout(() => setSyncStatus(""), 2000);
-    }, 600);
-  };
-
-  const handleNameChange = (name) => {
-    setCompanyName(name);
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(async () => {
-      await saveToRedis({ tools, companyName: name });
     }, 600);
   };
 
@@ -230,18 +160,17 @@ export default function AITracker() {
         <div style={{ position:"absolute", top:-40, right:-40, width:220, height:220, borderRadius:"50%", background:"rgba(255,255,255,0.12)" }}/>
         <div style={{ position:"absolute", bottom:-20, left:80, width:140, height:140, borderRadius:"50%", background:"rgba(255,255,255,0.08)" }}/>
         <div style={{ position:"relative" }}>
-          <div style={{ fontSize:10, letterSpacing:"0.28em", textTransform:"uppercase", color:"rgba(255,255,255,0.7)", marginBottom:6 }}>{companyName ? `${companyName} · ` : ""}Internal Tools</div>
+          <div style={{ fontSize:10, letterSpacing:"0.28em", textTransform:"uppercase", color:"rgba(255,255,255,0.7)", marginBottom:6 }}>{companyName} · Internal Tools</div>
           <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:4 }}>
             {editingName ? (
               <input ref={nameRef} value={companyName} autoFocus
-                onChange={e=>{setCompanyName(e.target.value); handleNameChange(e.target.value);}}
+                onChange={e=>setCompanyName(e.target.value)}
                 onBlur={()=>setEditingName(false)}
                 onKeyDown={e=>e.key==="Enter"&&setEditingName(false)}
-                placeholder="Your Company Name"
                 style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:28, fontWeight:700, color:"#fff", background:"rgba(255,255,255,0.15)", border:"2px solid rgba(255,255,255,0.4)", borderRadius:6, padding:"2px 10px", outline:"none", width:"auto", minWidth:200 }}/>
             ) : (
               <div style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:28, fontWeight:700, color:"#fff" }}>
-                {companyName || <span style={{color:"rgba(255,255,255,0.4)"}}>Your Company</span>} <span style={{ color:"rgba(255,255,255,0.7)", fontWeight:400 }}>AI Tools</span> <span style={{ color:"#fff" }}>Tracker</span>
+                {companyName} <span style={{ color:"rgba(255,255,255,0.7)", fontWeight:400 }}>AI Tools</span> <span style={{ color:"#fff" }}>Tracker</span>
               </div>
             )}
             <button onClick={()=>setEditingName(true)} title="Edit company name"
@@ -360,7 +289,9 @@ export default function AITracker() {
                 return (
                   <div key={t.id} style={{ background:"#fff", border:"1.5px solid #e2e8f0", borderRadius:10, padding:"16px 18px", display:"flex", alignItems:"flex-start", gap:14 }}>
                     {/* Favicon */}
-                    <ToolIcon url={t.url} name={t.name} bg={ci.bg} color={ci.color} />
+                    <div style={{ width:40, height:40, borderRadius:10, background:ci.bg, border:`1.5px solid ${ci.color}33`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, overflow:"hidden" }}>
+                      <img src={`https://www.google.com/s2/favicons?domain=${t.url}&sz=32`} alt="" width={20} height={20} style={{ borderRadius:3 }} onError={e=>{e.target.style.display="none";}}/>
+                    </div>
                     {/* Info */}
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:3, flexWrap:"wrap" }}>
