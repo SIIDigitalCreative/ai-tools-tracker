@@ -58,10 +58,50 @@ const CATS = [
 const catInfo = l => CATS.find(c => c.label === l) || CATS[CATS.length-1];
 const makeId  = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
 
+// ── Favicon component — multi-source with letter fallback ────────────────────
+function ToolIcon({ url, name, bg, color }) {
+  const [src, setSrc] = useState(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    if (!url) { setFailed(true); return; }
+    try {
+      const domain = new URL(url.startsWith("http") ? url : "https://" + url).hostname.replace(/^www\./, "");
+      setSrc(`https://icons.duckduckgo.com/ip3/${domain}.ico`);
+      setFailed(false);
+    } catch { setFailed(true); }
+  }, [url]);
+
+  const letter = (name || "?")[0].toUpperCase();
+
+  if (failed || !src) return (
+    <div style={{ width:40, height:40, borderRadius:10, background:bg, border:`1.5px solid ${color}33`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontFamily:"'Space Grotesk',sans-serif", fontSize:18, fontWeight:700, color }}>
+      {letter}
+    </div>
+  );
+
+  return (
+    <div style={{ width:40, height:40, borderRadius:10, background:bg, border:`1.5px solid ${color}33`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, overflow:"hidden" }}>
+      <img src={src} alt="" width={24} height={24} style={{ borderRadius:4, objectFit:"contain" }}
+        onError={() => {
+          try {
+            const domain = new URL(url.startsWith("http") ? url : "https://" + url).hostname.replace(/^www\./, "");
+            const next = [
+              `https://favicon.im/${domain}?larger=true`,
+              `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://${domain}&size=64`,
+            ].find(s => s !== src);
+            if (next) setSrc(next); else setFailed(true);
+          } catch { setFailed(true); }
+        }}
+      />
+    </div>
+  );
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function AITracker() {
   const [tools,setTools]               = useState([]);
-  const [companyName,setCompanyName]   = useState("Sunbeams Lifestyle");
+  const [companyName,setCompanyName]   = useState("SII");
   const [editingName,setEditingName]   = useState(false);
   const nameRef = useRef(null);
   const [adding,setAdding]             = useState(false);
@@ -289,9 +329,7 @@ export default function AITracker() {
                 return (
                   <div key={t.id} style={{ background:"#fff", border:"1.5px solid #e2e8f0", borderRadius:10, padding:"16px 18px", display:"flex", alignItems:"flex-start", gap:14 }}>
                     {/* Favicon */}
-                    <div style={{ width:40, height:40, borderRadius:10, background:ci.bg, border:`1.5px solid ${ci.color}33`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, overflow:"hidden" }}>
-                      <img src={`https://www.google.com/s2/favicons?domain=${t.url}&sz=32`} alt="" width={20} height={20} style={{ borderRadius:3 }} onError={e=>{e.target.style.display="none";}}/>
-                    </div>
+                    <ToolIcon url={t.url} name={t.name} bg={ci.bg} color={ci.color} />
                     {/* Info */}
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:3, flexWrap:"wrap" }}>
