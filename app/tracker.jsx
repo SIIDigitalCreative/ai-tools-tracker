@@ -519,7 +519,7 @@ export default function AITracker() {
                             <div style={{fontSize:14,fontWeight:700,color:"#0f172a"}}>{fmt(parseFloat(t.amount),t.currency)}</div>
                             {t.currency!=="PHP"&&<div style={{fontSize:10,color:"#F4442E",fontWeight:500}}>≈ {fmt(toPHP(t.amount,t.currency),"PHP")} PHP</div>}
                           </>}
-                          <div style={{fontSize:9,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.08em"}}>pay-as-go</div>
+                          <div style={{fontSize:9,color:"#F4442E",fontWeight:600,textTransform:"uppercase",letterSpacing:"0.08em"}}>PAY-AS-GO</div>
                         </>
                       :<>
                         <div style={{fontSize:16,fontWeight:700,fontFamily:"'Space Grotesk',sans-serif"}}>{fmt(parseFloat(t.amount)||0,t.currency)}</div>
