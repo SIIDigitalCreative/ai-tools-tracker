@@ -486,14 +486,14 @@ export default function AITracker() {
                         <span style={{fontSize:9,fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase",padding:"2px 8px",borderRadius:3,background:sc.bg,color:sc.color}}>{t.status||"Active"}</span>
                         <a href={t.url} target="_blank" rel="noreferrer" style={{fontSize:11,color:"#94a3b8",textDecoration:"none"}}>↗ {t.url.replace(/https?:\/\/(www\.)?/,"")}</a>
                       </div>
-                      {/* Category badges — own row */}
-                      <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:4}}>
+                      {t.purpose&&<div style={{fontSize:12,color:"#475569",lineHeight:1.5,marginBottom:t.notes?3:4}}>{t.purpose}</div>}
+                      {t.notes&&<div style={{fontSize:11,color:"#94a3b8",fontStyle:"italic",marginBottom:4}}>{t.notes}</div>}
+                      {/* Category badges — beneath description */}
+                      <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:2}}>
                         {cats.map(cat=>(
                           <span key={cat} style={{fontSize:9,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",padding:"2px 8px",borderRadius:3,background:catColor(cat).bg,color:catColor(cat).color}}>{cat}</span>
                         ))}
                       </div>
-                      {t.purpose&&<div style={{fontSize:12,color:"#475569",lineHeight:1.5,marginBottom:t.notes?3:0}}>{t.purpose}</div>}
-                      {t.notes&&<div style={{fontSize:11,color:"#94a3b8",fontStyle:"italic",marginBottom:3}}>{t.notes}</div>}
                       {/* End date */}
                       {t.endDate&&(
                         <div style={{fontSize:11,color:daysLeft!==null&&daysLeft<=30?"#dc2626":"#64748b",marginTop:2}}>
