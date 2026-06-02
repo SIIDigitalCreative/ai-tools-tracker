@@ -8,16 +8,16 @@ async function loadFromRedis() {
   try {
     const r = await fetch(`${API}/api/tools`);
     const d = await r.json();
-    return d.tools || [];
-  } catch { return []; }
+    return d;
+  } catch { return { tools:[], companyName:"" }; }
 }
 
-async function saveToRedis(tools) {
+async function saveToRedis(tools, companyName) {
   try {
     await fetch(`${API}/api/tools`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tools }),
+      body: JSON.stringify({ tools, companyName }),
     });
   } catch {}
 }
@@ -74,16 +74,30 @@ export default function AITracker() {
 
   // Load on mount
   useEffect(() => {
-    loadFromRedis().then(t => setTools(t));
+    loadFromRedis().then(d => {
+      if (d.tools) setTools(d.tools);
+      if (d.companyName) setCompanyName(d.companyName);
+    });
   }, []);
 
   // Debounced save to Redis
-  const save = (updated) => {
+  const save = (updated, name) => {
     setTools(updated);
     setSyncStatus("saving");
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
-      await saveToRedis(updated);
+      await saveToRedis(updated, name !== undefined ? name : companyName);
+      setSyncStatus("saved");
+      setTimeout(() => setSyncStatus(""), 2000);
+    }, 600);
+  };
+
+  // Save company name separately
+  const saveName = (name) => {
+    setSyncStatus("saving");
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(async () => {
+      await saveToRedis(tools, name);
       setSyncStatus("saved");
       setTimeout(() => setSyncStatus(""), 2000);
     }, 600);
@@ -160,13 +174,13 @@ export default function AITracker() {
         <div style={{ position:"absolute", top:-40, right:-40, width:220, height:220, borderRadius:"50%", background:"rgba(255,255,255,0.12)" }}/>
         <div style={{ position:"absolute", bottom:-20, left:80, width:140, height:140, borderRadius:"50%", background:"rgba(255,255,255,0.08)" }}/>
         <div style={{ position:"relative" }}>
-          <div style={{ fontSize:10, letterSpacing:"0.28em", textTransform:"uppercase", color:"rgba(255,255,255,0.7)", marginBottom:6 }}>{companyName} · Internal Tools</div>
+          <div style={{ fontSize:10, letterSpacing:"0.28em", textTransform:"uppercase", color:"rgba(255,255,255,0.9)", marginBottom:6 }}>{companyName} · Internal Tools</div>
           <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:4 }}>
             {editingName ? (
               <input ref={nameRef} value={companyName} autoFocus
                 onChange={e=>setCompanyName(e.target.value)}
-                onBlur={()=>setEditingName(false)}
-                onKeyDown={e=>e.key==="Enter"&&setEditingName(false)}
+                onBlur={()=>{setEditingName(false);saveName(companyName);}}
+                onKeyDown={e=>{if(e.key==="Enter"){setEditingName(false);saveName(companyName);}}}
                 style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:28, fontWeight:700, color:"#fff", background:"rgba(255,255,255,0.15)", border:"2px solid rgba(255,255,255,0.4)", borderRadius:6, padding:"2px 10px", outline:"none", width:"auto", minWidth:200 }}/>
             ) : (
               <div style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:28, fontWeight:700, color:"#fff" }}>
@@ -176,7 +190,7 @@ export default function AITracker() {
             <button onClick={()=>setEditingName(true)} title="Edit company name"
               style={{ background:"rgba(255,255,255,0.15)", border:"1px solid rgba(255,255,255,0.3)", borderRadius:4, padding:"3px 8px", color:"#fff", fontSize:10, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", letterSpacing:"0.08em" }}>✏ Edit</button>
           </div>
-          <div style={{ fontSize:13, color:"rgba(255,255,255,0.65)", marginBottom:24 }}>All AI subscriptions in one place — synced live</div>
+          <div style={{ fontSize:13, color:"rgba(255,255,255,0.9)", marginBottom:24 }}>All AI subscriptions in one place — synced live</div>
           <div style={{ display:"flex", gap:12, flexWrap:"wrap", alignItems:"center" }}>
             {[
               { label:"Total Tools",   value:tools.length,             color:"#fff" },
@@ -185,11 +199,11 @@ export default function AITracker() {
             ].map(s => (
               <div key={s.label} style={{ background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:8, padding:"10px 18px" }}>
                 <div style={{ fontSize:18, fontWeight:700, color:s.color, fontFamily:"'Space Grotesk',sans-serif" }}>{s.value}</div>
-                <div style={{ fontSize:10, letterSpacing:"0.12em", textTransform:"uppercase", color:"#64748b", marginTop:2 }}>{s.label}</div>
+                <div style={{ fontSize:10, letterSpacing:"0.12em", textTransform:"uppercase", color:"rgba(255,255,255,0.75)", marginTop:2 }}>{s.label}</div>
               </div>
             ))}
             {syncStatus && (
-              <div style={{ fontSize:11, color:syncStatus==="saved"?"#34d399":"#94a3b8", letterSpacing:"0.1em", marginLeft:8 }}>
+              <div style={{ fontSize:11, color:"rgba(255,255,255,0.9)", letterSpacing:"0.1em", marginLeft:8 }}>
                 {syncStatus==="saving"?"Syncing…":"✓ Saved"}
               </div>
             )}
