@@ -144,10 +144,16 @@ export default function AITracker() {
     if (pwInput === editPassword) {
       setIsAuthed(true);
       setShowPwModal(false);
-      if (pwAction === "add") setAdding(true);
-      if (pwAction === "edit") startEditDirect(pendingAction);
-      if (pwAction === "delete") deleteTool(pendingAction);
-      setPwInput(""); setPwError(false);
+      setPwInput("");
+      setPwError(false);
+      // Use setTimeout to ensure state updates before action
+      setTimeout(() => {
+        if (pwAction === "add") setAdding(true);
+        if (pwAction === "edit" && pendingAction) startEditDirect(pendingAction);
+        if (pwAction === "delete" && pendingAction) {
+          if(confirm(`Delete this tool?`)) deleteTool(pendingAction);
+        }
+      }, 50);
     } else {
       setPwError(true);
       setPwInput("");
@@ -302,7 +308,14 @@ export default function AITracker() {
         {/* Add button */}
         {!adding && (
           <div style={{display:"flex",justifyContent:"center",marginBottom:22}}>
-            <button style={{...btnP,display:"flex",alignItems:"center",gap:8,boxShadow:"0 4px 14px rgba(244,68,46,0.35)"}} onClick={()=>requireAuth("add",null)}>
+            <button style={{...btnP,display:"flex",alignItems:"center",gap:8,boxShadow:"0 4px 14px rgba(244,68,46,0.35)"}} onClick={()=>{
+            if(isAuthed){setAdding(true);return;}
+            setPwAction("add");
+            setPendingAction(null);
+            setPwInput("");
+            setPwError(false);
+            setShowPwModal(true);
+          }}>
               <span style={{fontSize:18,lineHeight:1}}>+</span> Add AI Tool
             </button>
           </div>
@@ -483,7 +496,7 @@ export default function AITracker() {
                       {t.endDate&&(
                         <div style={{fontSize:11,color:daysLeft!==null&&daysLeft<=30?"#dc2626":"#64748b",marginTop:2}}>
                           📅 Ends {new Date(t.endDate).toLocaleDateString("en-PH",{month:"short",day:"numeric",year:"numeric"})}
-                          {daysLeft!==null&&daysLeft>=0&&<span style={{marginLeft:6,fontWeight:600}}>{daysLeft<=30?`⚠ ${daysLeft} days left`:`(${daysLeft} days)`}</span>}
+                          {daysLeft!==null&&daysLeft>=0&&<span style={{marginLeft:6,fontWeight:600}}>{daysLeft<=30?`⚠ ${daysLeft} ${daysLeft===1?"day":"days"} left`:`(${daysLeft} ${daysLeft===1?"day":"days"})`}</span>}
                           {daysLeft!==null&&daysLeft<0&&<span style={{marginLeft:6,color:"#dc2626",fontWeight:600}}>Expired</span>}
                         </div>
                       )}
