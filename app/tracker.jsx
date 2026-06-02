@@ -80,6 +80,13 @@ export default function AITracker() {
   const [companyName,setCompanyName] = useState("Sunbeams Lifestyle");
   const [editingName,setEditingName] = useState(false);
   const [adding,setAdding]           = useState(false);
+  const [isAuthed,setIsAuthed]       = useState(false);
+  const [showPwModal,setShowPwModal] = useState(false);
+  const [pwInput,setPwInput]         = useState("");
+  const [pwError,setPwError]         = useState(false);
+  const [pwAction,setPwAction]       = useState(null); // "add" | "edit" | "delete"
+  const [pendingAction,setPendingAction] = useState(null);
+  const [editPassword]               = useState("sii2026");
   const [editId,setEditId]           = useState(null);
   const [syncStatus,setSyncStatus]   = useState("");
   const [form,setForm]               = useState(EMPTY_FORM);
@@ -115,6 +122,35 @@ export default function AITracker() {
       setSyncStatus("saved");
       setTimeout(() => setSyncStatus(""), 2000);
     }, 600);
+  };
+
+  // Auth gate
+  const requireAuth = (action, payload) => {
+    if (isAuthed) {
+      if (action === "add") setAdding(true);
+      if (action === "edit") startEditDirect(payload);
+      if (action === "delete") deleteTool(payload);
+      return;
+    }
+    setPwAction(action);
+    setPendingAction(payload);
+    setPwInput("");
+    setPwError(false);
+    setShowPwModal(true);
+  };
+
+  const submitPassword = () => {
+    if (pwInput === editPassword) {
+      setIsAuthed(true);
+      setShowPwModal(false);
+      if (pwAction === "add") setAdding(true);
+      if (pwAction === "edit") startEditDirect(pendingAction);
+      if (pwAction === "delete") deleteTool(pendingAction);
+      setPwInput(""); setPwError(false);
+    } else {
+      setPwError(true);
+      setPwInput("");
+    }
   };
 
   const handleUrl = (url) => {
@@ -173,7 +209,7 @@ export default function AITracker() {
 
   const deleteTool = (id) => save(tools.filter(t=>t.id!==id));
 
-  const startEdit = (t) => {
+  const startEditDirect = (t) => {
     setForm({
       name:t.name, url:t.url, purpose:t.purpose,
       categories: t.categories || [t.category||"Other"],
@@ -251,7 +287,7 @@ export default function AITracker() {
         {/* Add button */}
         {!adding && (
           <div style={{display:"flex",justifyContent:"center",marginBottom:22}}>
-            <button style={{...btnP,display:"flex",alignItems:"center",gap:8,boxShadow:"0 4px 14px rgba(244,68,46,0.35)"}} onClick={()=>setAdding(true)}>
+            <button style={{...btnP,display:"flex",alignItems:"center",gap:8,boxShadow:"0 4px 14px rgba(244,68,46,0.35)"}} onClick={()=>requireAuth("add",null)}>
               <span style={{fontSize:18,lineHeight:1}}>+</span> Add AI Tool
             </button>
           </div>
@@ -427,8 +463,8 @@ export default function AITracker() {
                         <div style={{fontSize:11,color:"#64748b",marginTop:2}}>≈ {fmt(toMonthly(t),t.currency)}/mo · {fmt(toAnnual(t),t.currency)}/yr</div>
                       </>}
                       <div style={{display:"flex",gap:6,justifyContent:"flex-end",marginTop:8}}>
-                        <button onClick={()=>startEdit(t)} style={{fontSize:11,padding:"4px 10px",border:"1px solid #e2e8f0",borderRadius:5,background:"#f8fafc",color:"#64748b",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Edit</button>
-                        <button onClick={()=>{if(confirm(`Delete ${t.name}?`))deleteTool(t.id);}} style={{fontSize:11,padding:"4px 10px",border:"1px solid #fecdd3",borderRadius:5,background:"#fff1f2",color:"#e11d48",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Delete</button>
+                        <button onClick={()=>requireAuth("edit",t)} style={{fontSize:11,padding:"4px 10px",border:"1px solid #e2e8f0",borderRadius:5,background:"#f8fafc",color:"#64748b",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Edit</button>
+                        <button onClick={()=>requireAuth("delete",t.id)} style={{fontSize:11,padding:"4px 10px",border:"1px solid #fecdd3",borderRadius:5,background:"#fff1f2",color:"#e11d48",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Delete</button>
                       </div>
                     </div>
                   </div>
@@ -471,6 +507,37 @@ export default function AITracker() {
           </>
         )}
       </div>
+
+      {/* PASSWORD MODAL */}
+      {showPwModal && (
+        <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.6)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setShowPwModal(false)}>
+          <div style={{background:"#fff",border:"1.5px solid #e2e8f0",borderRadius:12,padding:32,maxWidth:380,width:"100%",boxShadow:"0 20px 60px rgba(15,23,42,0.2)"}} onClick={e=>e.stopPropagation()}>
+            <div style={{fontFamily:"'Space Grotesk',sans-serif",fontSize:22,fontWeight:600,color:"#0f172a",marginBottom:4}}>🔒 Editor Access</div>
+            <div style={{fontSize:13,color:"#64748b",marginBottom:20}}>
+              {pwAction==="add"?"Enter password to add a new tool":pwAction==="edit"?"Enter password to edit this tool":"Enter password to delete this tool"}
+            </div>
+            <input
+              type="password"
+              autoFocus
+              value={pwInput}
+              onChange={e=>{setPwInput(e.target.value);setPwError(false);}}
+              onKeyDown={e=>e.key==="Enter"&&submitPassword()}
+              placeholder="Enter password"
+              style={{width:"100%",border:`1.5px solid ${pwError?"#F4442E":"#e2e8f0"}`,borderRadius:6,padding:"11px 14px",fontFamily:"'DM Sans',sans-serif",fontSize:14,outline:"none",background:pwError?"#fff5f2":"#f8fafc",color:"#0f172a",marginBottom:8}}
+            />
+            {pwError && <div style={{fontSize:12,color:"#F4442E",fontWeight:500,marginBottom:12}}>Incorrect password — try again.</div>}
+            <div style={{display:"flex",gap:10,justifyContent:"flex-end",marginTop:16}}>
+              <button onClick={()=>setShowPwModal(false)} style={{padding:"9px 18px",background:"none",border:"1.5px solid #e2e8f0",color:"#64748b",borderRadius:7,fontFamily:"'DM Sans',sans-serif",fontSize:13,cursor:"pointer"}}>Cancel</button>
+              <button onClick={submitPassword} style={{padding:"9px 20px",background:"linear-gradient(135deg,#F4442E,#FFB27D)",color:"#fff",border:"none",borderRadius:7,fontFamily:"'DM Sans',sans-serif",fontSize:13,fontWeight:600,cursor:"pointer"}}>Unlock</button>
+            </div>
+            {isAuthed && (
+              <div style={{marginTop:16,paddingTop:16,borderTop:"1px solid #e2e8f0",fontSize:12,color:"#94a3b8",textAlign:"center"}}>
+                Session active — you won't be asked again until you refresh.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
