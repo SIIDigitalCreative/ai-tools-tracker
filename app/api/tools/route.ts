@@ -18,25 +18,35 @@ export async function OPTIONS() {
   return cors(new NextResponse(null, { status: 204 }));
 }
 
-// GET — load tools and companyName
 export async function GET() {
   try {
-    const tools       = await redis.get("ai-tools")       ?? [];
-    const companyName = await redis.get("ai-company-name") ?? "";
-    return cors(NextResponse.json({ tools, companyName }));
+    const tools       = await redis.get("ai-tools")        ?? [];
+    const companyName = await redis.get("ai-company-name")  ?? "";
+    const settings    = await redis.get("ai-settings")      ?? {};
+    return cors(NextResponse.json({ tools, companyName, ...(typeof settings === 'object' ? settings : {}) }));
   } catch (err) {
     console.error("Redis GET error:", err);
     return cors(NextResponse.json({ tools: [], companyName: "" }, { status: 500 }));
   }
 }
 
-// POST — save tools and companyName
 export async function POST(req: NextRequest) {
   try {
-    const { tools, companyName } = await req.json();
+    const body = await req.json();
+    const { tools, companyName, filterCat, filterStatus, groupBy, searchQ, groupOrder } = body;
     await redis.set("ai-tools", tools);
     if (companyName !== undefined) {
       await redis.set("ai-company-name", companyName);
+    }
+    // Save filter/group settings
+    const settings: Record<string, unknown> = {};
+    if (filterCat !== undefined)    settings.filterCat = filterCat;
+    if (filterStatus !== undefined) settings.filterStatus = filterStatus;
+    if (groupBy !== undefined)      settings.groupBy = groupBy;
+    if (searchQ !== undefined)      settings.searchQ = searchQ;
+    if (groupOrder !== undefined)   settings.groupOrder = groupOrder;
+    if (Object.keys(settings).length > 0) {
+      await redis.set("ai-settings", settings);
     }
     return cors(NextResponse.json({ ok: true }));
   } catch (err) {
