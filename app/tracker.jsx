@@ -503,7 +503,11 @@ export default function AITracker() {
                     {/* Cost */}
                     <div className="tool-cost" style={{textAlign:"right",flexShrink:0,minWidth:110}}>
                       {t.billing==="free"?<div style={{fontSize:14,fontWeight:700,color:"#10b981"}}>Free</div>
-                      :t.billing==="credits"?<div style={{fontSize:14,fontWeight:700,color:"#f59e0b"}}>Credits</div>
+                      :t.billing==="credits"?<>
+                          <div style={{fontSize:12,fontWeight:700,color:"#f59e0b"}}>Credits</div>
+                          {parseFloat(t.amount)>0&&<div style={{fontSize:14,fontWeight:700,color:"#0f172a"}}>{fmt(parseFloat(t.amount),t.currency)}</div>}
+                          <div style={{fontSize:9,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.08em"}}>pay-as-go</div>
+                        </>
                       :<>
                         <div style={{fontSize:16,fontWeight:700,fontFamily:"'Space Grotesk',sans-serif"}}>{fmt(parseFloat(t.amount)||0,t.currency)}</div>
                         <div style={{fontSize:10,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.1em"}}>per {t.billing==="monthly"?"month":"year"}</div>
