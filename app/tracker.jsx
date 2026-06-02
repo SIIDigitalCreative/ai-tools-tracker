@@ -202,14 +202,21 @@ export default function AITracker() {
   const saveTool = () => {
     if (!form.name.trim() || !form.url.trim()) return;
     const tool = { ...form };
-    if (form.customCategory.trim()) {
-      tool.categories = [...new Set([...form.categories, form.customCategory.trim()])];
+    // Handle custom category
+    const customCat = (form.customCategory||"").trim();
+    if (customCat) {
+      tool.categories = [...new Set([...(form.categories||[]), customCat])];
     }
-    if (form.customStatus.trim()) tool.status = form.customStatus.trim();
-    delete tool.customCategory; delete tool.customStatus;
+    // Handle custom status
+    const customStat = (form.customStatus||"").trim();
+    if (customStat) tool.status = customStat;
+    delete tool.customCategory;
+    delete tool.customStatus;
+    // Make sure categories is always an array
+    if (!Array.isArray(tool.categories)) tool.categories = ["Other"];
     const updated = editId
-      ? tools.map(t=>t.id===editId?{...t,...tool}:t)
-      : [...tools, {id:makeId(),...tool,addedAt:new Date().toISOString()}];
+      ? tools.map(t => t.id === editId ? { ...t, ...tool } : t)
+      : [...tools, { id: makeId(), ...tool, addedAt: new Date().toISOString() }];
     save(updated);
     resetForm();
   };
@@ -480,17 +487,19 @@ export default function AITracker() {
                     </div>
                     {/* Info */}
                     <div style={{flex:1,minWidth:0}}>
-                      <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:4,flexWrap:"wrap"}}>
+                      {/* Row 1: name + status + url */}
+                      <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",marginBottom:4}}>
                         <span style={{fontFamily:"'Space Grotesk',sans-serif",fontSize:15,fontWeight:600}}>{t.name}</span>
-                        {/* Status badge */}
                         <span style={{fontSize:9,fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase",padding:"2px 8px",borderRadius:3,background:sc.bg,color:sc.color}}>{t.status||"Active"}</span>
-                        {/* Category badges */}
-                        {cats.map(cat=>(
-                          <span key={cat} style={{fontSize:9,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",padding:"2px 8px",borderRadius:3,background:catColor(cat).bg,color:catColor(cat).color}}>{cat}</span>
-                        ))}
                         <a href={t.url} target="_blank" rel="noreferrer" style={{fontSize:11,color:"#94a3b8",textDecoration:"none"}}>↗ {t.url.replace(/https?:\/\/(www\.)?/,"")}</a>
                       </div>
-                      {t.purpose&&<div style={{fontSize:12,color:"#475569",lineHeight:1.5,marginBottom:t.notes?3:0}}>{t.purpose}</div>}
+                      {t.purpose&&<div style={{fontSize:12,color:"#475569",lineHeight:1.5,marginBottom:4}}>{t.purpose}</div>}
+                      {/* Row 3: categories */}
+                      <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:4}}>
+                        {cats.map(cat=>(
+                          <span key={cat} style={{fontSize:9,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",padding:"2px 7px",borderRadius:3,background:catColor(cat).bg,color:catColor(cat).color}}>{cat}</span>
+                        ))}
+                      </div>
                       {t.notes&&<div style={{fontSize:11,color:"#94a3b8",fontStyle:"italic",marginBottom:3}}>{t.notes}</div>}
                       {/* End date */}
                       {t.endDate&&(
@@ -506,7 +515,10 @@ export default function AITracker() {
                       {t.billing==="free"?<div style={{fontSize:14,fontWeight:700,color:"#10b981"}}>Free</div>
                       :t.billing==="credits"?<>
                           <div style={{fontSize:12,fontWeight:700,color:"#f59e0b"}}>Credits</div>
-                          {parseFloat(t.amount)>0&&<div style={{fontSize:14,fontWeight:700,color:"#0f172a"}}>{fmt(parseFloat(t.amount),t.currency)}</div>}
+                          {parseFloat(t.amount)>0&&<>
+                            <div style={{fontSize:14,fontWeight:700,color:"#0f172a"}}>{fmt(parseFloat(t.amount),t.currency)}</div>
+                            {t.currency!=="PHP"&&<div style={{fontSize:10,color:"#F4442E",fontWeight:500}}>≈ {fmt(toPHP(t.amount,t.currency),"PHP")} PHP</div>}
+                          </>}
                           <div style={{fontSize:9,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.08em"}}>pay-as-go</div>
                         </>
                       :<>
@@ -520,79 +532,213 @@ export default function AITracker() {
                       </div>
                     </div>
 
-                    {/* INLINE EDIT FORM */}
-                    {inlineEditId===t.id&&(
+                    {/* INLINE EDIT FORM - reads directly from form state set by startEditDirect */}
+                    {inlineEditId===t.id&&editId===t.id&&(
                       <div style={{marginTop:14,borderTop:"2px dashed #F4442E44",paddingTop:16}}>
-                        <div style={{fontSize:12,fontWeight:700,color:"#F4442E",letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:14}}>✏ Editing: {form.name}</div>
+                        <div style={{fontSize:12,fontWeight:700,color:"#F4442E",letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:14}}>✏ Editing: {t.name}</div>
 
                         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
-                          <div><label style={lbl}>Tool Name</label><input style={inp} value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))}/></div>
-                          <div><label style={lbl}>URL</label><input style={inp} value={form.url} onChange={e=>handleUrl(e.target.value)}/></div>
+                          <div><label style={lbl}>Tool Name</label>
+                            <input style={inp} defaultValue={t.name} id={`edit-name-${t.id}`}/>
+                          </div>
+                          <div><label style={lbl}>URL</label>
+                            <input style={inp} defaultValue={t.url} id={`edit-url-${t.id}`}/>
+                          </div>
                         </div>
 
                         <div style={{marginBottom:12}}>
                           <label style={lbl}>Purpose</label>
-                          <textarea style={{...inp,resize:"vertical"}} rows={2} value={form.purpose} onChange={e=>setForm(f=>({...f,purpose:e.target.value}))}/>
+                          <textarea style={{...inp,resize:"vertical"}} rows={2} defaultValue={t.purpose||""} id={`edit-purpose-${t.id}`}/>
                         </div>
 
                         <div style={{marginBottom:12}}>
                           <label style={lbl}>Categories</label>
-                          <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
+                          <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}} id={`cat-container-${t.id}`}>
                             {DEFAULT_CATS.map(cat=>{
-                              const sel=form.categories.includes(cat);
+                              const cats2 = t.categories||[t.category||"Other"];
+                              const sel = cats2.includes(cat);
                               const ci=catColor(cat);
-                              return <button key={cat} onClick={()=>toggleCategory(cat)} style={{padding:"4px 10px",borderRadius:20,border:`1.5px solid ${sel?ci.color:"#e2e8f0"}`,background:sel?ci.bg:"#f8fafc",color:sel?ci.color:"#64748b",fontSize:11,fontWeight:sel?600:400,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>{sel?"✓ ":""}{cat}</button>;
+                              return <button key={cat} type="button"
+                                className={`cat-btn-${t.id}`}
+                                data-cat={cat}
+                                data-sel={sel?"1":"0"}
+                                onClick={e=>{
+                                  const btn=e.currentTarget;
+                                  const isSel=btn.getAttribute("data-sel")==="1";
+                                  btn.setAttribute("data-sel",isSel?"0":"1");
+                                  btn.style.borderColor=isSel?"#e2e8f0":ci.color;
+                                  btn.style.color=isSel?"#64748b":ci.color;
+                                  btn.style.fontWeight=isSel?"400":"600";
+                                  btn.style.background=isSel?"#f8fafc":ci.bg;
+                                }}
+                                style={{padding:"4px 10px",borderRadius:20,border:`1.5px solid ${sel?ci.color:"#e2e8f0"}`,background:sel?ci.bg:"#f8fafc",color:sel?ci.color:"#64748b",fontSize:11,fontWeight:sel?600:400,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
+                                {cat}
+                              </button>;
                             })}
                           </div>
                           <div style={{display:"flex",gap:8}}>
-                            <input style={{...inp,flex:1}} value={customCatInput} onChange={e=>setCustomCatInput(e.target.value)} placeholder="Custom category…" onKeyDown={e=>e.key==="Enter"&&(()=>{if(customCatInput.trim()){setForm(f=>({...f,categories:[...f.categories,customCatInput.trim()]}));setCustomCatInput("");}})()}/>
-                            <button onClick={()=>{if(customCatInput.trim()){setForm(f=>({...f,categories:[...f.categories,customCatInput.trim()]}));setCustomCatInput("");}}} style={{...btnS,whiteSpace:"nowrap"}}>+ Add</button>
+                            <input id={`custom-cat-${t.id}`} style={{...inp,flex:1}} placeholder="Add custom category…"
+                              onKeyDown={e=>{
+                                if(e.key!=="Enter")return;
+                                const val=e.target.value.trim();
+                                if(!val)return;
+                                const container=document.getElementById(`cat-container-${t.id}`);
+                                if(container.querySelector(`[data-cat="${val}"]`))return;
+                                const btn=document.createElement("button");
+                                btn.className=`cat-btn-${t.id}`;
+                                btn.setAttribute("data-cat",val);
+                                btn.setAttribute("data-sel","1");
+                                btn.textContent=val;
+                                btn.style.cssText="padding:4px 10px;border-radius:20px;border:1.5px solid #F4442E;background:#fff0ee;color:#F4442E;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;margin:0;";
+                                btn.onclick=()=>{const s=btn.getAttribute("data-sel")==="1";btn.setAttribute("data-sel",s?"0":"1");btn.style.background=s?"#f8fafc":"#fff0ee";btn.style.borderColor=s?"#e2e8f0":"#F4442E";btn.style.color=s?"#64748b":"#F4442E";btn.style.fontWeight=s?"400":"600";};
+                                container.appendChild(btn);
+                                e.target.value="";
+                              }}/>
+                            <button type="button" style={{...btnS,whiteSpace:"nowrap"}} onClick={()=>{
+                              const input=document.getElementById(`custom-cat-${t.id}`);
+                              const val=input?.value.trim();
+                              if(!val)return;
+                              const container=document.getElementById(`cat-container-${t.id}`);
+                              if(container.querySelector(`[data-cat="${val}"]`))return;
+                              const btn=document.createElement("button");
+                              btn.className=`cat-btn-${t.id}`;
+                              btn.setAttribute("data-cat",val);
+                              btn.setAttribute("data-sel","1");
+                              btn.textContent=val;
+                              btn.style.cssText="padding:4px 10px;border-radius:20px;border:1.5px solid #F4442E;background:#fff0ee;color:#F4442E;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;margin:0;";
+                              btn.onclick=()=>{const s=btn.getAttribute("data-sel")==="1";btn.setAttribute("data-sel",s?"0":"1");btn.style.background=s?"#f8fafc":"#fff0ee";btn.style.borderColor=s?"#e2e8f0":"#F4442E";btn.style.color=s?"#64748b":"#F4442E";btn.style.fontWeight=s?"400":"600";};
+                              container.appendChild(btn);
+                              input.value="";
+                            }}>+ Add</button>
                           </div>
                         </div>
 
                         <div style={{marginBottom:12}}>
                           <label style={lbl}>Status</label>
-                          <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                          <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}} id={`stat-container-${t.id}`}>
                             {DEFAULT_STATUSES.map(s=>{
-                              const sel=form.status===s;
+                              const sel=(t.status||"Active")===s;
                               const sc2=statColor(s);
-                              return <button key={s} onClick={()=>setForm(f=>({...f,status:s}))} style={{padding:"4px 10px",borderRadius:20,border:`1.5px solid ${sel?sc2.color:"#e2e8f0"}`,background:sel?sc2.bg:"#f8fafc",color:sel?sc2.color:"#64748b",fontSize:11,fontWeight:sel?600:400,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>{sel?"✓ ":""}{s}</button>;
+                              return <button key={s} type="button"
+                                data-status={s}
+                                className={`stat-btn-${t.id}`}
+                                data-sel={sel?"1":"0"}
+                                onClick={e=>{
+                                  document.querySelectorAll(`#stat-container-${t.id} button`).forEach(b=>{
+                                    b.setAttribute("data-sel","0");
+                                    b.style.background="#f8fafc";
+                                    b.style.borderColor="#e2e8f0";
+                                    b.style.color="#64748b";
+                                    b.style.fontWeight="400";
+                                  });
+                                  e.currentTarget.setAttribute("data-sel","1");
+                                  e.currentTarget.style.background=sc2.bg;
+                                  e.currentTarget.style.borderColor=sc2.color;
+                                  e.currentTarget.style.color=sc2.color;
+                                  e.currentTarget.style.fontWeight="600";
+                                }}
+                                style={{padding:"4px 10px",borderRadius:20,border:`1.5px solid ${sel?sc2.color:"#e2e8f0"}`,background:sel?sc2.bg:"#f8fafc",color:sel?sc2.color:"#64748b",fontSize:11,fontWeight:sel?600:400,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>{s}</button>;
                             })}
+                          </div>
+                          {/* Custom status input */}
+                          <div style={{display:"flex",gap:8}}>
+                            <input id={`custom-stat-${t.id}`} style={{...inp,flex:1}} placeholder="Add custom status…"
+                              onKeyDown={e=>{
+                                if(e.key==="Enter"){
+                                  const val=e.target.value.trim();
+                                  if(!val)return;
+                                  const sc2={color:"#6b7280",bg:"#f3f4f6"};
+                                  const container=document.getElementById(`stat-container-${t.id}`);
+                                  container.querySelectorAll("button").forEach(b=>{b.setAttribute("data-sel","0");b.style.background="#f8fafc";b.style.borderColor="#e2e8f0";b.style.color="#64748b";b.style.fontWeight="400";});
+                                  const btn=document.createElement("button");
+                                  btn.setAttribute("data-status",val);
+                                  btn.setAttribute("data-sel","1");
+                                  btn.textContent=val;
+                                  btn.style.cssText=`padding:4px 10px;border-radius:20px;border:1.5px solid ${sc2.color};background:${sc2.bg};color:${sc2.color};font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;margin:0;`;
+                                  btn.onclick=e2=>{container.querySelectorAll("button").forEach(b=>{b.setAttribute("data-sel","0");b.style.background="#f8fafc";b.style.borderColor="#e2e8f0";b.style.color="#64748b";b.style.fontWeight="400";});btn.setAttribute("data-sel","1");btn.style.background=sc2.bg;btn.style.borderColor=sc2.color;btn.style.color=sc2.color;btn.style.fontWeight="600";};
+                                  container.appendChild(btn);
+                                  e.target.value="";
+                                }
+                              }}/>
+                            <button type="button" style={{...btnS,whiteSpace:"nowrap"}} onClick={()=>{
+                              const input=document.getElementById(`custom-stat-${t.id}`);
+                              const val=input.value.trim();
+                              if(!val)return;
+                              const sc2={color:"#6b7280",bg:"#f3f4f6"};
+                              const container=document.getElementById(`stat-container-${t.id}`);
+                              container.querySelectorAll("button").forEach(b=>{b.setAttribute("data-sel","0");b.style.background="#f8fafc";b.style.borderColor="#e2e8f0";b.style.color="#64748b";b.style.fontWeight="400";});
+                              const btn=document.createElement("button");
+                              btn.setAttribute("data-status",val);
+                              btn.setAttribute("data-sel","1");
+                              btn.textContent=val;
+                              btn.style.cssText=`padding:4px 10px;border-radius:20px;border:1.5px solid ${sc2.color};background:${sc2.bg};color:${sc2.color};font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;margin:0;`;
+                              btn.onclick=e2=>{container.querySelectorAll("button").forEach(b=>{b.setAttribute("data-sel","0");b.style.background="#f8fafc";b.style.borderColor="#e2e8f0";b.style.color="#64748b";b.style.fontWeight="400";});btn.setAttribute("data-sel","1");btn.style.background=sc2.bg;btn.style.borderColor=sc2.color;btn.style.color=sc2.color;btn.style.fontWeight="600";};
+                              container.appendChild(btn);
+                              input.value="";
+                            }}>+ Add</button>
                           </div>
                         </div>
 
                         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 90px 110px",gap:10,marginBottom:12}}>
                           <div><label style={lbl}>Billing</label>
-                            <select style={inp} value={form.billing} onChange={e=>setForm(f=>({...f,billing:e.target.value}))}>
+                            <select style={inp} defaultValue={t.billing} id={`edit-billing-${t.id}`}>
                               <option value="monthly">Monthly</option>
                               <option value="annual">Annual</option>
                               <option value="credits">Credits / Pay-as-go</option>
                               <option value="free">Free</option>
                             </select>
                           </div>
-                          <div><label style={lbl}>Ends</label><input type="date" style={inp} value={form.endDate} onChange={e=>setForm(f=>({...f,endDate:e.target.value}))}/></div>
+                          <div><label style={lbl}>Ends</label>
+                            <input type="date" style={inp} defaultValue={t.endDate||""} id={`edit-enddate-${t.id}`}/>
+                          </div>
                           <div><label style={lbl}>Currency</label>
-                            <select style={inp} value={form.currency} onChange={e=>{
-                              const newCur=e.target.value;
-                              const rates={PHP:1,USD:56,EUR:61,GBP:72};
-                              const amt=parseFloat(form.amount)||0;
-                              if(amt>0&&form.currency!==newCur){const inPHP=amt*rates[form.currency];setForm(f=>({...f,currency:newCur,amount:(inPHP/rates[newCur]).toFixed(2)}));}
-                              else setForm(f=>({...f,currency:newCur}));
-                            }}>
+                            <select style={inp} defaultValue={t.currency||"PHP"} id={`edit-currency-${t.id}`}>
                               {["PHP","USD","EUR","GBP"].map(cc=><option key={cc}>{cc}</option>)}
                             </select>
                           </div>
-                          <div><label style={lbl}>Amount</label><input type="number" style={inp} value={form.amount} onChange={e=>setForm(f=>({...f,amount:e.target.value}))}/></div>
+                          <div><label style={lbl}>Amount</label>
+                            <input type="number" style={inp} defaultValue={t.amount||""} id={`edit-amount-${t.id}`}/>
+                          </div>
                         </div>
 
                         <div style={{marginBottom:16}}>
                           <label style={lbl}>Notes</label>
-                          <input style={inp} value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))}/>
+                          <input style={inp} defaultValue={t.notes||""} id={`edit-notes-${t.id}`}/>
                         </div>
 
                         <div style={{display:"flex",gap:8}}>
-                          <button style={btnP} onClick={saveTool}>Save Changes</button>
-                          <button style={btnS} onClick={resetForm}>Cancel</button>
+                          <button style={btnP} onClick={()=>{
+                            // Read values directly from DOM
+                            const getId = (field) => document.getElementById(`edit-${field}-${t.id}`)?.value||"";
+                            const name = getId("name");
+                            const url  = getId("url");
+                            if(!name.trim()||!url.trim()) return;
+
+                            // Get selected categories
+                            const catBtns = document.querySelectorAll(`#cat-container-${t.id} button`);
+                            const cats = Array.from(catBtns).filter(b=>b.getAttribute("data-sel")==="1").map(b=>b.getAttribute("data-cat"));
+
+                            // Get selected status
+                            const statBtn = document.querySelector(`.stat-btn-${t.id}[data-sel="1"]`);
+                            const status = statBtn?.getAttribute("data-status")||t.status||"Active";
+
+                            const updated = tools.map(x => x.id===t.id ? {
+                              ...x,
+                              name, url,
+                              purpose: getId("purpose"),
+                              categories: cats.length?cats:["Other"],
+                              status,
+                              billing: getId("billing"),
+                              endDate: getId("enddate"),
+                              currency: getId("currency"),
+                              amount: getId("amount"),
+                              notes: getId("notes"),
+                            } : x);
+                            save(updated);
+                            setInlineEditId(null);
+                            setEditId(null);
+                          }}>Save Changes</button>
+                          <button style={btnS} onClick={()=>{setInlineEditId(null);setEditId(null);}}>Cancel</button>
                         </div>
                       </div>
                     )}
