@@ -80,6 +80,7 @@ export default function AITracker() {
   const [companyName,setCompanyName] = useState("");
   const [editingName,setEditingName] = useState(false);
   const [adding,setAdding]           = useState(false);
+  const [inlineEditId,setInlineEditId] = useState(null);
   const [isAuthed,setIsAuthed]       = useState(false);
   const [showPwModal,setShowPwModal] = useState(false);
   const [pwInput,setPwInput]         = useState("");
@@ -227,8 +228,8 @@ export default function AITracker() {
       notes:t.notes||""
     });
     setEditId(t.id);
-    setAdding(true);
-    window.scrollTo({top:0, behavior:"smooth"});
+    setInlineEditId(t.id);
+    setAdding(false);
   };
 
   // Cost helpers — always convert to PHP for totals
@@ -518,6 +519,83 @@ export default function AITracker() {
                         <button onClick={()=>requireAuth("delete",t.id)} style={{fontSize:11,padding:"4px 10px",border:"1px solid #fecdd3",borderRadius:5,background:"#fff1f2",color:"#e11d48",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Delete</button>
                       </div>
                     </div>
+
+                    {/* INLINE EDIT FORM */}
+                    {inlineEditId===t.id&&(
+                      <div style={{marginTop:14,borderTop:"2px dashed #F4442E44",paddingTop:16}}>
+                        <div style={{fontSize:12,fontWeight:700,color:"#F4442E",letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:14}}>✏ Editing: {form.name}</div>
+
+                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
+                          <div><label style={lbl}>Tool Name</label><input style={inp} value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))}/></div>
+                          <div><label style={lbl}>URL</label><input style={inp} value={form.url} onChange={e=>handleUrl(e.target.value)}/></div>
+                        </div>
+
+                        <div style={{marginBottom:12}}>
+                          <label style={lbl}>Purpose</label>
+                          <textarea style={{...inp,resize:"vertical"}} rows={2} value={form.purpose} onChange={e=>setForm(f=>({...f,purpose:e.target.value}))}/>
+                        </div>
+
+                        <div style={{marginBottom:12}}>
+                          <label style={lbl}>Categories</label>
+                          <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
+                            {DEFAULT_CATS.map(cat=>{
+                              const sel=form.categories.includes(cat);
+                              const ci=catColor(cat);
+                              return <button key={cat} onClick={()=>toggleCategory(cat)} style={{padding:"4px 10px",borderRadius:20,border:`1.5px solid ${sel?ci.color:"#e2e8f0"}`,background:sel?ci.bg:"#f8fafc",color:sel?ci.color:"#64748b",fontSize:11,fontWeight:sel?600:400,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>{sel?"✓ ":""}{cat}</button>;
+                            })}
+                          </div>
+                          <div style={{display:"flex",gap:8}}>
+                            <input style={{...inp,flex:1}} value={customCatInput} onChange={e=>setCustomCatInput(e.target.value)} placeholder="Custom category…" onKeyDown={e=>e.key==="Enter"&&(()=>{if(customCatInput.trim()){setForm(f=>({...f,categories:[...f.categories,customCatInput.trim()]}));setCustomCatInput("");}})()}/>
+                            <button onClick={()=>{if(customCatInput.trim()){setForm(f=>({...f,categories:[...f.categories,customCatInput.trim()]}));setCustomCatInput("");}}} style={{...btnS,whiteSpace:"nowrap"}}>+ Add</button>
+                          </div>
+                        </div>
+
+                        <div style={{marginBottom:12}}>
+                          <label style={lbl}>Status</label>
+                          <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                            {DEFAULT_STATUSES.map(s=>{
+                              const sel=form.status===s;
+                              const sc2=statColor(s);
+                              return <button key={s} onClick={()=>setForm(f=>({...f,status:s}))} style={{padding:"4px 10px",borderRadius:20,border:`1.5px solid ${sel?sc2.color:"#e2e8f0"}`,background:sel?sc2.bg:"#f8fafc",color:sel?sc2.color:"#64748b",fontSize:11,fontWeight:sel?600:400,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>{sel?"✓ ":""}{s}</button>;
+                            })}
+                          </div>
+                        </div>
+
+                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 90px 110px",gap:10,marginBottom:12}}>
+                          <div><label style={lbl}>Billing</label>
+                            <select style={inp} value={form.billing} onChange={e=>setForm(f=>({...f,billing:e.target.value}))}>
+                              <option value="monthly">Monthly</option>
+                              <option value="annual">Annual</option>
+                              <option value="credits">Credits / Pay-as-go</option>
+                              <option value="free">Free</option>
+                            </select>
+                          </div>
+                          <div><label style={lbl}>Ends</label><input type="date" style={inp} value={form.endDate} onChange={e=>setForm(f=>({...f,endDate:e.target.value}))}/></div>
+                          <div><label style={lbl}>Currency</label>
+                            <select style={inp} value={form.currency} onChange={e=>{
+                              const newCur=e.target.value;
+                              const rates={PHP:1,USD:56,EUR:61,GBP:72};
+                              const amt=parseFloat(form.amount)||0;
+                              if(amt>0&&form.currency!==newCur){const inPHP=amt*rates[form.currency];setForm(f=>({...f,currency:newCur,amount:(inPHP/rates[newCur]).toFixed(2)}));}
+                              else setForm(f=>({...f,currency:newCur}));
+                            }}>
+                              {["PHP","USD","EUR","GBP"].map(cc=><option key={cc}>{cc}</option>)}
+                            </select>
+                          </div>
+                          <div><label style={lbl}>Amount</label><input type="number" style={inp} value={form.amount} onChange={e=>setForm(f=>({...f,amount:e.target.value}))}/></div>
+                        </div>
+
+                        <div style={{marginBottom:16}}>
+                          <label style={lbl}>Notes</label>
+                          <input style={inp} value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))}/>
+                        </div>
+
+                        <div style={{display:"flex",gap:8}}>
+                          <button style={btnP} onClick={saveTool}>Save Changes</button>
+                          <button style={btnS} onClick={resetForm}>Cancel</button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
