@@ -67,38 +67,53 @@ function ToolIcon({ url, name, bg, color }) {
     if (!url) { setFailed(true); return; }
     try {
       const domain = new URL(url.startsWith("http") ? url : "https://" + url).hostname.replace(/^www\./, "");
-      setSrc(`https://icons.duckduckgo.com/ip3/${domain}.ico`);
+      // Try multiple favicon sources in order
+      const sources = [
+        `https://icons.duckduckgo.com/ip3/${domain}.ico`,
+        `https://favicon.im/${domain}?larger=true`,
+        `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://${domain}&size=64`,
+      ];
+      setSrc(sources[0]);
       setFailed(false);
     } catch { setFailed(true); }
   }, [url]);
 
   const letter = (name || "?")[0].toUpperCase();
 
-  if (failed || !src) return (
-    <div style={{ width:40, height:40, borderRadius:10, background:bg, border:`1.5px solid ${color}33`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontFamily:"'Space Grotesk',sans-serif", fontSize:18, fontWeight:700, color }}>
-      {letter}
-    </div>
-  );
+  if (failed || !src) {
+    return (
+      <div style={{ width:40, height:40, borderRadius:10, background:bg, border:`1.5px solid ${color}33`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontFamily:"'Space Grotesk',sans-serif", fontSize:18, fontWeight:700, color:color }}>
+        {letter}
+      </div>
+    );
+  }
 
   return (
     <div style={{ width:40, height:40, borderRadius:10, background:bg, border:`1.5px solid ${color}33`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, overflow:"hidden" }}>
-      <img src={src} alt="" width={24} height={24} style={{ borderRadius:4, objectFit:"contain" }}
+      <img
+        src={src}
+        alt=""
+        width={24}
+        height={24}
+        style={{ borderRadius:4, objectFit:"contain" }}
         onError={() => {
+          // Try next source
           try {
             const domain = new URL(url.startsWith("http") ? url : "https://" + url).hostname.replace(/^www\./, "");
-            const next = [
+            const sources = [
+              `https://icons.duckduckgo.com/ip3/${domain}.ico`,
               `https://favicon.im/${domain}?larger=true`,
               `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://${domain}&size=64`,
-            ].find(s => s !== src);
-            if (next) setSrc(next); else setFailed(true);
+            ];
+            const idx = sources.indexOf(src);
+            if (idx < sources.length - 1) { setSrc(sources[idx + 1]); }
+            else { setFailed(true); }
           } catch { setFailed(true); }
         }}
       />
     </div>
   );
 }
-
-// ── Component ─────────────────────────────────────────────────────────────────
 export default function AITracker() {
   const [tools,setTools]               = useState([]);
   const [companyName,setCompanyName]   = useState("SII");
